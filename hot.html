@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goa Risk Areas - 112 Analytics</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css" />
+  <style>
+    :root {
+      --primary: #0f5132;
+      --primary-light: #14532d;
+      --primary-lighter: #e8f5e9;
+      --accent: #10b981;
+      --accent-light: #d1fae5;
+      --text: #1f2937;
+      --text-light: #6b7280;
+      --text-lighter: #9ca3af;
+      --bg: #f9fafb;
+      --bg-light: #ffffff;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
+      --border-light: #f3f4f6;
+      --danger: #dc2626;
+      --danger-light: #fef2f2;
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --info: #2563eb;
+      --info-light: #eff6ff;
+      --radius: 0.5rem;
+      --radius-lg: 0.75rem;
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-md);
+      z-index: 1000;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header .logo {
+      height: 32px;
+      border-radius: 4px;
+    }
+
+    .map-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 60px);
+    }
+
+    /* Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    /* App Container */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Header */
+    .header {
+      background: #0f5132;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header .logo {
+      height: 32px;
+      border-radius: 4px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .btn.secondary {
+      background: white;
+      color: #0f5132;
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn.secondary:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Map Container */
+    .map-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 60px);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #f0f0f0;
+    }
+
+    /* Controls */
+    .controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      max-width: 200px;
+    }
+
+    .controls h3 {
+      margin: 0 0 12px 0;
+      font-size: 1rem;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+
+    .risk-high { background-color: #ef4444; }
+    .risk-medium { background-color: #f59e0b; }
+    .risk-low { background-color: #10b981; }
+
+    .controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: var(--bg-light);
+      padding: 1rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      width: 240px;
+      font-size: 0.875rem;
+      border: 1px solid var(--border);
+    }
+
+    .controls h3 {
+      margin: 0 0 1rem 0;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .controls h3 i {
+      color: var(--primary);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin: 0.5rem 0;
+      font-size: 0.8125rem;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-right: 0.75rem;
+      border: 2px solid white;
+      box-shadow: var(--shadow-sm);
+      flex-shrink: 0;
+    }
+
+    .risk-high { background-color: #ef4444; }
+    .risk-medium { background-color: #f59e0b; }
+    .risk-low { background-color: #10b981; }
+    .risk-unknown { background-color: #9ca3af; }
+
+    .marker-popup {
+      font-family: 'Inter', sans-serif;
+      min-width: 200px;
+      padding: 0.5rem 0;
+    }
+
+    .marker-popup h4 {
+      margin: 0 0 0.5rem 0;
+      color: var(--text);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .marker-popup p {
+      margin: 0.25rem 0;
+      font-size: 0.8125rem;
+      color: var(--text-light);
+      line-height: 1.4;
+    }
+
+    .marker-popup .risk-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+
+    .risk-high-bg { background-color: #fef2f2; color: #dc2626; }
+    .risk-medium-bg { background-color: #fffbeb; color: #d97706; }
+    .risk-low-bg { background-color: #ecfdf5; color: #059669; }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body, html {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+      line-height: 1.5;
+    }
+    
+    /* Layout */
+    .background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+    }
+    
+    /* Header */
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
+      z-index: 100;
+    }
+    
+    .brand-mini {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .brand-mini img {
+      height: 36px;
+      border-radius: 4px;
+    }
+    
+    .filters-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .control {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .control span {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #555;
+    }
+    
+    select, .btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+    
+    .btn {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    
+    .btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+    
+    .btn.gradient {
+      background: linear-gradient(90deg, var(--primary-color), #6c5ce7);
+    }
+    
+    .btn.sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    
+    /* Main Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1600px;
+      margin: 0 auto;
+      height: calc(100vh - 64px);
+    }
+    
+    /* Card Styles */
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .panel-top {
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .panel-top h2 {
+      font-size: 18px;
+      margin: 0;
+      color: #333;
+    }
+    
+    /* Heatmap Container */
+    #heatmapContainer {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Stats Section */
+    .stats {
+      margin-bottom: 20px;
+    }
+    
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+    
+    .stat-item {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 4px;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Controls */
+    .controls {
+      padding: 16px;
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    .control-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .control-group input[type="range"] {
+      width: 100%;
+    }
+    
+    .zone-toggle-group {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    
+    .zone-toggle-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    
+    .zone-toggle-btn.active {
+      color: white;
+      font-weight: 600;
+    }
+    
+    .zone-toggle-btn[data-level="high"].active {
+      background: #ff4d4d;
+      border-color: #ff1a1a;
+    }
+    
+    .zone-toggle-btn[data-level="medium"].active {
+      background: #ffaa33;
+      border-color: #ff8c1a;
+    }
+    
+    .zone-toggle-btn[data-level="low"].active {
+      background: #66cc66;
+      border-color: #33cc33;
+    }
+    
+    /* Risk marker base styles */
+    .risk-marker {
+      position: relative;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* High risk marker (red) */
+    .risk-marker.high-risk {
+      font-size: 28px;
+      color: #ff0000;
+      text-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+      animation: pulse 2s infinite;
+    }
+    
+    /* Low risk marker (blue) */
+    .risk-marker.low-risk {
+      font-size: 24px;
+      color: #3498db;
+      text-shadow: 0 0 10px rgba(52, 152, 219, 0.7);
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Popup styles */
+    .zone-popup {
+      font-family: Arial, sans-serif;
+      min-width: 200px;
+    }
+    
+    .zone-popup h4 {
+      margin: 0 0 10px 0;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    
+    .zone-popup div {
+      margin: 5px 0;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    
+    /* Custom zone polygon styles */
+    .custom-area-icon {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid #059669;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .area-popup, .red-zone-popup {
+      font-family: 'Inter', sans-serif;
+      min-width: 200px;
+    }
+    
+    .area-popup h4, .red-zone-popup h4 {
+      margin: 0 0 10px 0;
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .area-popup p, .red-zone-popup p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    
+    .area-popup button {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      margin: 3px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    
+    .area-popup button:hover {
+      background: #047857;
+    }
+    
+    .red-zone-popup {
+      border-left: 4px solid #dc2626;
+      padding-left: 8px;
+    }
+    
+    .leaflet-popup-content {
+      margin: 8px 12px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+      .layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      
+      #heatmapContainer {
+        height: 500px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1><img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" class="logo"> 112 Analytics - Risk Areas</h1>
+      <a href="/dashboard.html" class="btn secondary">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </header>
+    
+    <div class="map-container">
+      <div id="map"></div>
+      
+      <div class="controls">
+        <h3><i class="fas fa-map-marker-alt"></i> Risk Legend</h3>
+        <div class="legend-item">
+          <div class="legend-color risk-high"></div>
+          <span>High Risk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color risk-medium"></div>
+          <span>Medium Risk</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color risk-low"></div>
+          <span>Low Risk</span>
+        </div>
+    <h3><i class="fas fa-map-marker-alt"></i> Risk Legend</h3>
+    <div class="legend-item">
+      <div class="legend-color risk-high"></div>
+      <span>High Risk</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color risk-medium"></div>
+      <span>Medium Risk</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color risk-low"></div>
+      <span>Low Risk</span>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+  </script>
+  </script>
+</body>
+</html>
+          [15.2, 73.6], // Southwest corner
+          [15.7, 74.2]  // Northeast corner
+        ]);
+
+        // Add OpenStreetMap tiles with retina support if available
+        const isRetina = window.devicePixelRatio > 1;
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          detectRetina: isRetina,
+          maxZoom: 19
+        }).addTo(map);
+
+        // Sample areas of interest with more detailed data
+        const areasOfInterest = [
+          {
+            name: 'Panjim City Center',
+            coords: [15.4909, 73.8278],
+            intensity: 0.85,
+            description: 'High traffic and activity area',
+            type: 'commercial'
+          },
+          {
+            name: 'Mapusa Market',
+            coords: [15.5915, 73.8109],
+            intensity: 0.7,
+            description: 'Busy market area',
+            type: 'market'
+          },
+          {
+            name: 'Vasco da Gama',
+            coords: [15.3860, 73.8160],
+            intensity: 0.6,
+            description: 'Port and transport hub',
+            type: 'transport'
+          },
+          {
+            name: 'Calangute Beach',
+            coords: [15.5439, 73.7553],
+            intensity: 0.75,
+            description: 'Popular tourist destination',
+            type: 'tourism'
+          },
+          {
+            name: 'Margao City',
+            coords: [15.2993, 73.9580],
+            intensity: 0.65,
+            description: 'Commercial district',
+            type: 'commercial'
+          }
+        ];
+
+        // Convert to heatmap format and add to map
+        const heatData = areasOfInterest.map(area => [
+          area.coords[0], 
+          area.coords[1], 
+          area.intensity
+        ]);
+
+        // Add heat layer with optimized settings
+        const heatLayer = L.heatLayer(heatData, {
+          radius: 25,
+          blur: 15,
+          maxZoom: 15,
+          max: 1.0,
+          minOpacity: 0.5,
+          gradient: {
+            0.4: 'blue',
+            0.6: 'cyan',
+            0.7: 'lime',
+            0.8: 'yellow',
+            1.0: 'red'
+          }
+        }).addTo(map);
+
+        // Add markers for each area of interest
+        areasOfInterest.forEach(area => {
+          const marker = L.circleMarker(area.coords, {
+            radius: 8,
+            fillColor: getColorForIntensity(area.intensity),
+            color: '#fff',
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.8
+          }).addTo(map);
+
+          // Add popup with area information
+          marker.bindPopup(`
+            <div class="area-popup">
+              <h4>${area.name}</h4>
+              <p>${area.description}</p>
+              <p>Activity Level: ${Math.round(area.intensity * 100)}%</p>
+              <p>Type: ${area.type}</p>
+            </div>
+          `);
+        });
+
+        // Add controls
+        const info = L.control({position: 'topright'});
+        info.onAdd = function() {
+          this._div = L.DomUtil.create('div', 'info');
+          this.update();
+          return this._div;
+        };
+        info.update = function() {
+          this._div.innerHTML = `
+            <h4>Goa Hotspots</h4>
+            <div>${areasOfInterest.length} areas of interest</div>
+            <div>${new Date().toLocaleString()}</div>
+          `;
+        };
+        info.addTo(map);
+
+        // Add area controls
+        const areaControls = L.control({position: 'topleft'});
+        areaControls.onAdd = function() {
+          const div = L.DomUtil.create('div', 'area-controls');
+          div.innerHTML = `
+            <button onclick="map.flyTo([15.4909, 73.8278], 14)">Panjim</button>
+            <button onclick="map.flyTo([15.5439, 73.7553], 14)">Calangute</button>
+            <button onclick="map.flyTo([15.5915, 73.8109], 14)">Mapusa</button>
+            <button onclick="map.fitBounds([[15.2, 73.6], [15.7, 74.2]])">View All</button>
+          `;
+          return div;
+        };
+        areaControls.addTo(map);
+
+        // Helper function to get color based on intensity
+        function getColorForIntensity(intensity) {
+          if (intensity > 0.8) return '#ff0000';
+          if (intensity > 0.6) return '#ff8c00';
+          if (intensity > 0.4) return '#ffd700';
+          return '#00ff00';
+        }
+
+        // Hide loading indicator when map is ready
+        loading.style.display = 'none';
+
+        // Add error handling for map events
+        map.on('error', function(e) {
+          console.error('Map error:', e.message);
+          loading.textContent = 'Error loading map. Please try refreshing the page.';
+          loading.style.display = 'block';
+        });
+
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        loading.textContent = 'Failed to load map. Please check your internet connection.';
+      }
+    }
+
+    // Initialize the map
+    function initMap() {
+      try {
+        // Create map instance
+        const map = L.map('map').setView([15.2993, 74.1240], 10);  // Centered on Goa
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19
+        }).addTo(map);
+        
+        // Add a simple marker as an example
+        const marker = L.marker([15.2993, 74.1240]).addTo(map)
+          .bindPopup('<b>Panjim, Goa</b><br>Sample location')
+          .openPopup();
+        
+        // Add scale control
+        L.control.scale({
+          imperial: false,
+          metric: true
+        }).addTo(map);
+        
+        // Add a circle around the marker to indicate risk area
+        L.circle([15.2993, 74.1240], {
+          color: '#ef4444',
+          fillColor: '#f87171',
+          fillOpacity: 0.2,
+          radius: 1000
+        }).addTo(map);
+        
+        console.log('Map initialized successfully');
+        return map;
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+          mapContainer.innerHTML = `
+            <div style="padding: 20px; color: #ef4444; background: #fef2f2; border-radius: 8px; margin: 20px;">
+              <h3>Error loading map</h3>
+              <p>${error.message}</p>
+              <p>Please check your internet connection and try refreshing the page.</p>
+            </div>
+          `;
+        }
+        return null;
+      }
+    }
+    
+    // Load Leaflet and then initialize the map
+    function loadScript(url, callback) {
+      return new Promise((resolve, reject) => {
+        if (document.querySelector(`script[src="${url}"]`)) {
+          if (callback) callback();
+          resolve();
+          return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = () => {
+          if (callback) callback();
+          resolve();
+        };
+        script.onerror = (error) => {
+          console.error(`Failed to load script: ${url}`, error);
+          reject(error);
+        };
+        document.head.appendChild(script);
+      });
+    }
+    
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // Load Leaflet first
+        await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
+        
+        // Initialize the map
+        const map = initMap();
+        
+        // Add window resize handler to update map size
+        window.addEventListener('resize', () => {
+          if (map) {
+            setTimeout(() => {
+              map.invalidateSize();
+            }, 100);
+          }
+        });
+        
+      } catch (error) {
+        console.error('Failed to initialize application:', error);
+      }
+    });
+  </script>
+</body>
+</html>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="./hot.css" />
+  
+  <!-- JavaScript Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <style>
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+      font-size: 1.2em;
+    }
+    
+    .loading-spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 2s linear infinite;
+      margin-right: 15px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ff4444;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      z-index: 1001;
+      display: none;
+    }
+  </style>
+  <style>
+    #heatmapContainer {
+      width: 100%;
+      height: 600px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .zone-toggle-group {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    
+    .zone-toggle-btn {
+      flex: 1;
+      padding: 6px 8px;
+      border: 1px solid #ddd;
+      background: #f5f5f5;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    
+    .zone-toggle-btn.active {
+      color: white;
+      font-weight: 600;
+    }
+    
+    .zone-toggle-btn[data-level="high"].active {
+      background: #ff4d4d;
+      border-color: #ff1a1a;
+    }
+    
+    .zone-toggle-btn[data-level="medium"].active {
+      background: #ffaa33;
+      border-color: #ff8c1a;
+    }
+    
+    .zone-toggle-btn[data-level="low"].active {
+      background: #66cc66;
+      border-color: #33cc33;
+    }
+    
+    /* Risk marker base styles */
+    .risk-marker {
+      position: relative;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* High risk marker (red) */
+    .risk-marker.high-risk {
+      font-size: 28px;
+      color: #ff0000;
+      text-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+      animation: pulse 2s infinite;
+    }
+    
+    /* Low risk marker (blue) */
+    .risk-marker.low-risk {
+      font-size: 24px;
+      color: #3498db;
+      text-shadow: 0 0 10px rgba(52, 152, 219, 0.7);
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    
+    /* Ripple effect for high risk markers */
+    .risk-marker.high-risk::before {
+      content: '';
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 0, 0, 0.2);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: -1;
+      animation: ripple 2s infinite;
+    }
+    
+    /* Animation for high risk marker */
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.9; }
+    }
+    
+    /* Popup styles */
+    .zone-popup {
+      font-family: Arial, sans-serif;
+      min-width: 200px;
+    }
+    
+    .zone-popup h4 {
+      margin: 0 0 10px 0;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    
+    .zone-popup div {
+      margin: 5px 0;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    
+    /* Drawing mode cursor */
+    .leaflet-container.crosshair-cursor-enabled {
+      cursor: crosshair;
+    }
+    
+    /* Custom zone polygon styles */
+    .leaflet-popup-content {
+      min-width: 180px;
+    }
+    
+    .leaflet-popup-content button {
+      margin-top: 8px;
+      padding: 4px 8px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .leaflet-popup-content button:hover {
+      background: #c82333;
+    }
+    
+    /* Drawing controls */
+    .drawing-controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .drawing-controls button {
+      display: block;
+      width: 100%;
+      margin-bottom: 5px;
+    }
+    
+    @keyframes ripple {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.5; }
+      70% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+      100% { opacity: 0; }
+    }
+    
+    .cv-heatmap-controls {
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .cv-heatmap-controls h4 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #333;
+    }
+    
+    .form-group {
+      margin-bottom: 10px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+      color: #555;
+    }
+    
+    .form-group input[type="range"] {
+      width: 100%;
+    }
+    
+    .btn {
+      background: #4a6cf7;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 5px;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: #3a5ce4;
+    }
+  </style>
+  <style>
+    /* Ensure the map container has a defined size */
+    #heatmapContainer {
+      width: 100%;
+      height: 600px;
+      margin: 20px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .custom-area-icon {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid #059669;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .area-popup, .red-zone-popup {
+      font-family: 'Inter', sans-serif;
+      min-width: 200px;
+    }
+    
+    .area-popup h4, .red-zone-popup h4 {
+      margin: 0 0 10px 0;
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .area-popup p, .red-zone-popup p {
+      margin: 5px 0;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    
+    .area-popup button {
+      background: #059669;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      margin: 3px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    
+    .area-popup button:hover {
+      background: #047857;
+    }
+    
+    .red-zone-popup {
+      border-left: 4px solid #dc2626;
+      padding-left: 8px;
+    }
+    
+    .leaflet-popup-content {
+      margin: 8px 12px;
+    }
+  </style>
+  <!-- Required libraries for PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+  <div class="background"></div>
+
+  <!-- Top Bar -->
+  <header class="filters" role="region" aria-label="CV Hotspots">
+    <div class="brand-mini">
+      <img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <span>CV-Based Hotspots</span>
+    </div>
+    <a class="btn gradient sm back-btn" href="./dashboard.html" title="Back to Dashboard">← Back</a>
+    <div class="filters-row">
+      <label class="control">
+        <span>Data Source</span>
+        <select id="dataSource">
+          <option value="realtime">Real-time CV Feed</option>
+          <option value="historical">Historical Analysis</option>
+          <option value="simulated">Simulated Data</option>
+        </select>
+      </label>
+      <button id="exportData" class="btn gradient">Export Data</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="layout">
+    <!-- Heatmap Panel -->
+    <section class="heat card">
+      <div class="panel-top">
+        <h2>CV-Based Hotspot Detection</h2>
+        <div class="legend">
+          <span>Low Risk</span>
+          <div class="ramp"></div>
+          <span>High Risk</span>
+        </div>
+      </div>
+      <div id="heatmapContainer"></div>
+      <p class="hint">Heatmap shows detected hotspots based on computer vision analysis</p>
+    </section>
+
+    <!-- Right Column: Stats and Controls -->
+    <aside class="rightcol">
+      <section class="card stats">
+        <header>Hotspot Statistics</header>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <div class="stat-value" id="totalHotspots">0</div>
+            <div class="stat-label">Total Hotspots</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="highRiskZones">0</div>
+            <div class="stat-label">High Risk Zones</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="mediumRiskZones">0</div>
+            <div class="stat-label">Medium Risk Zones</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="lowRiskZones">0</div>
+            <div class="stat-label">Low Risk Zones</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="lastUpdated">Now</div>
+            <div class="stat-label">Last Updated</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card controls">
+        <header>Heatmap Controls</header>
+        <div class="control-group">
+          <label>Heatmap Opacity</label>
+          <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.5">
+        </div>
+        <div class="control-group">
+          <label>Point Radius</label>
+          <input type="range" id="radiusSlider" min="5" max="50" value="25">
+        </div>
+        <div class="control-group">
+          <label>Blur</label>
+          <input type="range" id="blurSlider" min="5" max="30" value="15">
+        </div>
+        <div class="control-group zone-toggle-group">
+          <button class="zone-toggle-btn active" data-level="high">High Risk</button>
+          <button class="zone-toggle-btn active" data-level="medium">Medium Risk</button>
+          <button class="zone-toggle-btn active" data-level="low">Low Risk</button>
+        </div>
+        <div class="control-group">
+          <button id="exportData" class="btn">Export Data</button>
+          <button id="refreshData" class="btn">Refresh Data</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Heatmap Plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <!-- CV Data Processing -->
+  <script src="./static/js/cv-data.js"></script>
+  <!-- CV Heatmap Visualization -->
+  <script src="./static/js/cv-heatmap.js"></script>
+  <script>
+    // Update stats periodically
+    function updateStats() {
+      if (!window.cvHeatmap) return;
+      
+      const stats = {
+        totalHotspots: window.cvHeatmap.currentData?.length || 0,
+        highRiskZones: window.cvHeatmap.currentZones?.high?.length || 0,
+        avgIntensity: 0,
+        lastUpdated: new Date().toLocaleTimeString()
+      };
+      
+      // Calculate average intensity if we have data
+      if (window.cvHeatmap.currentData?.length > 0) {
+        const sum = window.cvHeatmap.currentData.reduce((acc, point) => {
+          return acc + (point.intensity || point[2] || 0);
+        }, 0);
+        stats.avgIntensity = sum / window.cvHeatmap.currentData.length;
+      }
+      
+      // Update UI
+      document.getElementById('totalHotspots').textContent = stats.totalHotspots;
+      document.getElementById('highRiskZones').textContent = stats.highRiskZones;
+      document.getElementById('avgIntensity').textContent = stats.avgIntensity.toFixed(1);
+      document.getElementById('lastUpdated').textContent = stats.lastUpdated;
+    }
+    
+    // Initialize the heatmap
+    document.addEventListener('DOMContentLoaded', async () => {
+      const heatmapContainer = document.getElementById('heatmapContainer');
+      try {
+        // Initialize the heatmap
+        console.log('Initializing CVHeatmap...');
+        window.cvHeatmap = new CVHeatmap('heatmapContainer');
+        
+        // Set up event listeners
+        window.cvHeatmap.addEventListener('ready', (e) => {
+          console.log('Heatmap initialized successfully', e);
+          
+          // Update stats after heatmap is ready
+          updateStats();
+        });
+        
+        window.cvHeatmap.addEventListener('error', (event) => {
+          console.error('Heatmap error:', event.detail);
+          console.error('Error initializing heatmap:', event.detail?.message || 'Failed to load heatmap data');
+        });
+      } catch (error) {
+        console.error('Failed to initialize heatmap:', error);
+        console.error('Error initializing heatmap:', error.message || 'Unknown error');
+      }
+      
+      // Set up export button
+      document.getElementById('exportData').addEventListener('click', () => {
+        window.cvHeatmap.exportZoneData();
+      });
+      
+      // Set up zone toggle buttons
+      document.querySelectorAll('.zone-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const level = e.target.dataset.level;
+          e.target.classList.toggle('active');
+          window.cvHeatmap.toggleZones(level);
+        });
+      });
+    });
+    
+    // Update stats every 5 seconds
+    setInterval(updateStats, 5000);
+    updateStats();
+    
+    // Export functionality
+    document.getElementById('exportData').addEventListener('click', function() {
+      alert('Exporting hotspot data...');
+      // In a real app, this would trigger a download of the current CV data
+    });
+    
+    // Data source change handler
+    document.getElementById('dataSource').addEventListener('change', function(e) {
+      const source = e.target.value;
+      // In a real app, this would load different data sources
+      console.log('Switching to data source:', source);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Temporal & Spatial Analytics - 112 Goa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./temp.css" />
+  <!-- Chart.js for visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet for interactive maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+        crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+  <!-- TensorFlow.js for Machine Learning -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+  <!-- Turf.js for geospatial analysis -->
+  <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+  <!-- Date-fns for date manipulation -->
+  <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/format/index.min.js"></script>
+</head>
+<body>
+  <div class="background"></div>
+  <div id="tooltip" class="tooltip" hidden></div>
+  
+  <!-- Loading Indicator -->
+  <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+    <div class="spinner"></div>
+    <span>Updating dashboard...</span>
+  </div>
+  
+  <!-- Error Message Container -->
+  <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+  <!-- Top Filters Bar -->
+  <header class="filters" role="region" aria-label="Filters">
+    <div class="brand-mini">
+      <img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <span>112 Analytics Goa</span>
+    </div>
+    <a class="btn gradient sm back-btn" href="/dash.html" title="Back to Dashboard">← Back</a>
+    <div class="filters-row">
+      <label class="control">
+        <span>Date Range</span>
+        <input type="date" id="fromDt" value="2023-01-01"> to 
+        <input type="date" id="toDt" value="2023-12-31">
+      </label>
+      <label class="control">
+        <span>Category</span>
+        <select id="category">
+          <option value="all">All Incidents</option>
+          <option value="women">Women's Safety</option>
+          <option value="crime">Crime</option>
+          <option value="accident">Road Accidents</option>
+          <option value="medical">Medical</option>
+          <option value="fire">Fire</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label class="control">
+        <span>Time of Day</span>
+        <select id="timeFilter">
+          <option value="all">All Hours</option>
+          <option value="morning">Morning (6AM-12PM)</option>
+          <option value="afternoon">Afternoon (12PM-5PM)</option>
+          <option value="evening">Evening (5PM-10PM)</option>
+          <option value="night">Night (10PM-6AM)</option>
+        </select>
+      </label>
+      <button id="applyBtn" class="btn gradient">Apply Filters</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="layout">
+    <!-- Left Column: Time-based Charts -->
+    <section class="charts">
+      <!-- Hourly Distribution -->
+      <article class="card hoverable">
+        <header>
+          <h3>Hourly Distribution</h3>
+          <div class="chart-actions">
+            <button id="hourlyCsv" class="btn gradient sm" type="button" title="Export as CSV">CSV</button>
+            <button id="hourlyPng" class="btn gradient sm" type="button" title="Export as Image">PNG</button>
+          </div>
+        </header>
+        <div class="chart-container">
+          <canvas id="hourlyChart"></canvas>
+        </div>
+      </article>
+
+      <!-- Daily Trend -->
+      <article class="card hoverable">
+        <header>
+          <h3>Daily Trend (Last 30 Days)</h3>
+          <div class="chart-actions">
+            <button id="dailyCsv" class="btn gradient sm" type="button" title="Export as CSV">CSV</button>
+            <button id="dailyPng" class="btn gradient sm" type="button" title="Export as Image">PNG</button>
+          </div>
+        </header>
+        <div class="chart-container">
+          <canvas id="dailyChart"></canvas>
+        </div>
+      </article>
+
+      <!-- Monthly Trend -->
+      <article class="card hoverable">
+        <header>
+          <h3>Monthly Trend</h3>
+          <div class="chart-actions">
+            <button id="monthlyCsv" class="btn gradient sm" type="button" title="Export as CSV">CSV</button>
+            <button id="monthlyPng" class="btn gradient sm" type="button" title="Export as Image">PNG</button>
+          </div>
+        </header>
+        <div class="chart-container">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </article>
+    </section>
+
+    <!-- Right Column: Map and Heatmap -->
+    <section class="spatial">
+      <!-- Interactive Map -->
+      <article class="card hoverable">
+        <header>
+          <h3>Incident Heatmap</h3>
+          <div class="chart-actions">
+            <button id="mapReset" class="btn gradient sm" type="button" title="Reset View">Reset</button>
+          </div>
+        </header>
+        <div class="map-container">
+          <div id="map"></div>
+          <div class="map-legend">
+            <div class="legend-title">Incident Density</div>
+            <div class="legend-scale">
+              <ul class="legend-labels">
+                <li><span style="background:#f7fcf5;"></span>Low</li>
+                <li><span style="background:#e5f5e0;"></span></li>
+                <li><span style="background:#c7e9c0;"></span></li>
+                <li><span style="background:#a1d99b;"></span></li>
+                <li><span style="background:#74c476;"></span>Medium</li>
+                <li><span style="background:#41ab5d;"></span></li>
+                <li><span style="background:#238b45;"></span></li>
+                <li><span style="background:#006d2c;"></span>High</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Top Locations -->
+      <article class="card hoverable">
+        <header>
+          <h3>Top Locations</h3>
+          <div class="chart-actions">
+            <span class="badge">Last 30 Days</span>
+          </div>
+        </header>
+        <div class="locations-list" id="topLocations">
+          <!-- Will be populated by JavaScript -->
+          <div class="loading">Loading location data...</div>
+        </div>
+      </article>
+
+      <!-- Incident Categories -->
+      <article class="card hoverable">
+        <header>
+          <h3>Incident Categories</h3>
+          <div class="chart-actions">
+            <button id="categoryCsv" class="btn gradient sm" type="button" title="Export as CSV">CSV</button>
+          </div>
+        </header>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <aside class="insights">
+    <article class="card hoverable ai">
+      <div class="ai-header">
+        <header>AI-Powered Risk Prediction</header>
+        <div class="confidence-badge">
+          <i class="fas fa-shield-alt"></i>
+          <span>Confidence: <span id="aiConfidence" class="confidence-indicator">85%</span></span>
+        </div>
+      </div>
+      
+      <div class="prediction-summary">
+        <div class="metric">
+          <span class="value" id="aiRise">--%</span>
+          <span class="trend">
+            <i class="fas fa-arrow-up"></i>
+            <span>from yesterday</span>
+          </span>
+        </div>
+        
+        <div class="risk-indicator">
+          <span class="label">Risk Level:</span>
+          <span id="aiRiskLevel" class="risk-moderate">Moderate</span>
+        </div>
+      </div>
+      
+      <div class="prediction-details">
+        <div class="detail-row">
+          <span class="label">Location:</span>
+          <span id="aiLocation" class="value">All Regions</span>
+        </div>
+        <div class="detail-row">
+          <span class="label">Season:</span>
+          <span id="aiSeason" class="value">--</span>
+        </div>
+      </div>
+      
+      <div class="ai-recommendations">
+        <h4>Recommendations</h4>
+        <ul id="aiRecommendations">
+          <li>Loading recommendations...</li>
+        </ul>
+      </div>
+    </article>
+
+    <article class="card hoverable patrol">
+      <div class="patrol-header">
+        <header>Recommended Patrol Plan</header>
+        <button id="refreshPatrolBtn" class="btn-icon" title="Refresh recommendations">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+      </div>
+      
+      <div class="patrol-info">
+        <div class="patrol-stats">
+          <div class="stat">
+            <i class="fas fa-map-marked-alt"></i>
+            <span>5 <small>Hotspots</small></span>
+          </div>
+          <div class="stat">
+            <i class="fas fa-clock"></i>
+            <span>45 <small>min</small></span>
+          </div>
+          <div class="stat">
+            <i class="fas fa-shield-alt"></i>
+            <span>High <small>Priority</small></span>
+          </div>
+        </div>
+        
+        <div class="patrol-route">
+          <ul id="patrolList" class="patrol-list">
+            <li class="empty-state">
+              <i class="fas fa-route"></i>
+              <span>Generating optimal patrol route...</span>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="patrol-actions">
+          <button id="exportPlanBtn" class="btn gradient sm">
+            <i class="fas fa-download"></i> Export Plan
+          </button>
+          <button id="startPatrolBtn" class="btn outline sm">
+            <i class="fas fa-play"></i> Start Patrol
+          </button>
+        </div>
+      </div>
+  </aside>
+
+  <!-- Main JavaScript -->
+  <script src="./ai-utils.js"></script>
+  <script src="./temp.js"></script>
+  
+  <!-- AI Predictions -->
+  <script src="./ai-predictions.js"></script>
+  
+  <!-- Patrol Management -->
+  <script src="./patrol.js"></script>
+</body>
+</html>

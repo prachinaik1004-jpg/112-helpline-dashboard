@@ -1,0 +1,113 @@
+/* Map container */
+#map {
+  height: 100%;
+  min-height: 500px;
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom marker styles */
+.custom-div-icon {
+  position: relative;
+  width: 30px;
+  height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.marker-pin {
+  width: 20px;
+  height: 20px;
+  border-radius: 50% 50% 50% 0;
+  background: #3498db;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 5px;
+  top: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.marker-pin::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  margin: 5px;
+  background: white;
+  position: absolute;
+  border-radius: 50%;
+  top: 0;
+  left: 0;
+  opacity: 0.8;
+}
+
+/* Map popup styles */
+.map-popup {
+  min-width: 200px;
+  padding: 10px;
+}
+
+.map-popup h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #2c3e50;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.map-popup p {
+  margin: 5px 0;
+  font-size: 13px;
+}
+
+.incident-types {
+  color: #7f8c8d;
+  font-size: 12px;
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.popup-actions {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.btn-small {
+  padding: 4px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-small:hover {
+  background: #2980b9;
+}
+
+/* Legend */
+.legend {
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  line-height: 1.5;
+  margin-top: 10px;
+}
+
+.legend i {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  margin-right: 5px;
+  border-radius: 50%;
+}
+
+.legend .dot.blue { background: #3498db; }
+.legend .dot.red { background: #e74c3c; }
+.legend .dot.yellow { background: #f39c12; }
+.legend .dot.purple { background: #9b59b6; }

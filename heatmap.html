@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goa Risk Areas - 112 Analytics</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css" />
+  <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    .header {
+      background: #0f5132;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      height: 32px;
+      border-radius: 4px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      background: white;
+      color: #0f5132;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #f0f0f0;
+    }
+
+    .map-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 60px);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Legend */
+    .legend {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      line-height: 1.5;
+    }
+
+    .legend h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+
+    .risk-high { background-color: #ef4444; }
+    .risk-medium { background-color: #f59e0b; }
+    .risk-low { background-color: #10b981; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1><img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" class="logo"> 112 Analytics - Risk Areas</h1>
+      <a href="/dashboard.html" class="btn">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </header>
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize the map centered on Goa
+      const map = L.map('map').setView([15.2993, 74.1240], 11);
+      
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Add scale control
+      L.control.scale().addTo(map);
+
+      // Add legend
+      const legend = L.control({ position: 'bottomright' });
+      legend.onAdd = function() {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = `
+          <h3>Risk Legend</h3>
+          <div class="legend-item">
+            <div class="legend-color risk-high"></div>
+            <span>High Risk</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color risk-medium"></div>
+            <span>Medium Risk</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color risk-low"></div>
+            <span>Low Risk</span>
+          </div>
+        `;
+        return div;
+      };
+      legend.addTo(map);
+
+      // Sample data (replace with your actual CSV loading logic)
+      // Format: [lat, lng, intensity]
+      const sampleData = [
+        // Panjim area (high risk)
+        [15.4909, 73.8278, 0.8],
+        [15.5000, 73.8300, 0.8],
+        [15.4950, 73.8350, 0.8],
+        // Mapusa area (medium risk)
+        [15.5915, 73.8090, 0.5],
+        [15.5950, 73.8100, 0.5],
+        // Margao area (low risk)
+        [15.2739, 73.9587, 0.3],
+        [15.2750, 73.9600, 0.3],
+        // Add more sample points as needed
+      ];
+
+      // Create heatmap layer
+      const heat = L.heatLayer(sampleData, {
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        max: 1.0,
+        gradient: {
+          0.4: 'blue',   // Low risk
+          0.6: 'lime',   // Medium risk
+          0.8: 'red'     // High risk
+        }
+      }).addTo(map);
+
+      // Load data from your CSV file
+      fetch('dataset.csv')
+        .then(response => response.text())
+        .then(csvData => {
+          // Parse CSV data
+          const results = Papa.parse(csvData, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true
+          });
+
+          // Build heat data from dataset.csv
+          const headers = results.meta && results.meta.fields ? results.meta.fields : [];
+          const lower = s => (s || '').toString().trim().toLowerCase();
+          const findCol = (cands) => {
+            const idx = headers.findIndex(h => cands.includes(lower(h)));
+            return idx >= 0 ? headers[idx] : null;
+          };
+          const latCol = findCol(['latitude','lat','y','lat_dd','latitude_dd']);
+          const lonCol = findCol(['longitude','lon','lng','x','long','long_dd','longitude_dd']);
+
+          const stationCoords = {
+            'panjim': [15.4989, 73.8278],
+            'panaji': [15.4989, 73.8278],
+            'mapusa': [15.5915, 73.8090],
+            'margao': [15.2950, 73.9570],
+            'vasco': [15.3980, 73.8150],
+            'ponda': [15.4030, 74.0152],
+            'bicholim': [15.6000, 73.9559],
+            'valpoi': [15.5320, 74.1360],
+            'pernem': [15.7230, 73.7953],
+            'dharbandora': [15.4085, 74.0839],
+            'canacona': [15.0170, 74.0500],
+            'quepem': [15.2230, 74.0700],
+            'cuncolim': [15.1773, 73.9939],
+            'colva': [15.2799, 73.9224],
+            'anjuna': [15.5873, 73.7449],
+            'calangute': [15.5439, 73.7553],
+            'old goa': [15.5036, 73.9103],
+            'collem': [15.3333, 74.2167],
+            'porvorim': [15.5600, 73.8080]
+          };
+
+          const stationCol = findCol(['police_station_name','police station name','police_station','police station']);
+
+          const heatData = [];
+          (results.data || []).forEach(row => {
+            let lat = parseFloat(row[latCol]);
+            let lon = parseFloat(row[lonCol]);
+            if (isNaN(lat) || isNaN(lon)) {
+              const raw = (row[stationCol] || row.POLICE_STATION || '').toString();
+              const norm = lower(raw).replace(/\(.*?\)/g,'').trim();
+              const key = Object.keys(stationCoords).find(k => norm.includes(k));
+              if (key) {
+                lat = stationCoords[key][0];
+                lon = stationCoords[key][1];
+              }
+            }
+            if (!isNaN(lat) && !isNaN(lon)) {
+              heatData.push([lat, lon, 0.6]);
+            }
+          });
+
+          if (heatData.length > 0) {
+            heat.setLatLngs(heatData);
+            const bounds = heatData.reduce((b, p) => b.extend([p[0], p[1]]), L.latLngBounds([heatData[0][0], heatData[0][1]],[heatData[0][0], heatData[0][1]]));
+            map.fitBounds(bounds, { padding: [50, 50] });
+          }
+        })
+        .catch(error => {
+          console.error('Error loading CSV data:', error);
+          alert('Error loading risk data. Using sample data instead.');
+        });
+    });
+  </script>
+  <script src="static/js/chatbot-widget.js"></script>
+</body>
+</html>

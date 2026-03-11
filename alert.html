@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alerts & Anomaly Detection - 112 Goa</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./alert.css" />
+</head>
+<body>
+  <div class="background"></div>
+
+  <!-- Top Bar -->
+  <header class="filters" role="region" aria-label="Alerts">
+    <div class="brand-mini">
+      <img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <span>Alerts & Anomaly Detection</span>
+    </div>
+    <a class="btn gradient sm back-btn" href="./dash.html" title="Back to Dashboard">← Back</a>
+    <div class="filters-row">
+      <div id="callCountDisplay" class="stats-row">
+        <!-- Dynamic stats will be inserted here by JavaScript -->
+      </div>
+      <div class="filters-controls">
+        <label class="control">
+          <span>Category</span>
+          <select id="alertCategory">
+            <option value="all" selected>All</option>
+            <option value="panic">Panic</option>
+            <option value="silence">Suspicious Silence</option>
+            <option value="prank">Prank Filtered</option>
+          </select>
+        </label>
+        <button id="refreshAlerts" class="btn gradient" title="Refresh data">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="layout">
+    <!-- Urgent Queue -->
+    <section class="card queue">
+      <header>
+        <span>Urgent Cases Queue</span>
+        <span class="subtitle">Sorted by AI urgency score</span>
+      </header>
+      <div class="queue-container">
+        <div class="queue-header">
+          <span>Call ID</span>
+          <span>Summary</span>
+          <span>Urgency</span>
+        </div>
+        <ul id="queueList" class="queue-list" aria-label="Urgent Cases"></ul>
+      </div>
+      <div class="legend-row">
+        <span class="legend-item"><span class="ic ic-panic"></span> Panic</span>
+        <span class="legend-item"><span class="ic ic-silence"></span> Suspicious Silence</span>
+        <span class="legend-item"><span class="ic ic-prank"></span> Prank Filtered</span>
+      </div>
+    </section>
+
+    <!-- Details + Anomalies -->
+    <section class="right">
+      <article class="card details">
+        <header>Call Detail</header>
+        <div id="detailWrap" class="detail-wrap" aria-live="polite">
+          <p>Select a case from the queue to view details.</p>
+        </div>
+      </article>
+
+      <article class="card anomalies">
+        <header>Analytics Dashboard</header>
+        <div class="an-charts">
+          <div class="panel">
+            <h3>Call Distribution by Type</h3>
+            <div class="chart-container">
+              <canvas id="callTypeChart"></canvas>
+            </div>
+          </div>
+          
+         
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="./alert.js" defer></script>
+</body>
+</html>

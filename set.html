@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings & Role-Based Access - 112 Goa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./set.css" />
+  <link rel="stylesheet" href="./templates/entry.css" />
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* Fallback font stack in case Google Fonts doesn't load */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    /* Ensure the page takes full height */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    /* Make sure the layout takes full height */
+    .layout {
+      min-height: calc(100vh - 60px); /* Adjust based on your header height */
+    }
+  </style>
+</head>
+<body>
+  <div class="background"></div>
+
+  <!-- Top Bar -->
+  <header class="filters" role="region" aria-label="Settings">
+    <div class="brand-mini">
+      <img src="https://upload.wikimedia.org/wikipedia/en/thumb/5/55/Goa_Police_Logo.svg/1200px-Goa_Police_Logo.svg.png" alt="Goa Police" style="width: 36px; height: auto;" onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiI+PHBhdGggZmlsbD0iIzBmNTEzMiIgZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptLTEgMTVoMnYyaC0ydi0yem0wLTEzaDJ2MTBoLTJWNHoiLz48L3N2Zz4=';" />
+      <span>Settings & Role-Based Access</span>
+    </div>
+    <a class="btn gradient sm back-btn" href="dash.html" title="Back to Dashboard">← Back</a>
+    <div class="filters-row">
+      <button id="saveBtn" class="btn gradient">Save Settings</button>
+      <button id="resetBtn" class="btn gradient">Reset</button>
+      <a href="add.html" id="addTestEntry" class="btn gradient">Add New Entry</a>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="layout">
+    <!-- Left: configuration panels -->
+    <section class="left">
+      <article class="card panel">
+        <header>User Management</header>
+        <div class="panel-body">
+          <div class="roles">
+            <label class="role">
+              <input type="radio" name="role" value="admin" />
+              <div class="role-card">
+                <h3>Admin</h3>
+                <p>Full access to all modules and settings.</p>
+              </div>
+            </label>
+            <label class="role">
+              <input type="radio" name="role" value="supervisor" />
+              <div class="role-card">
+                <h3>Supervisor</h3>
+                <p>Analytics & patrol recommendations.</p>
+              </div>
+            </label>
+            <label class="role">
+              <input type="radio" name="role" value="operator" />
+              <div class="role-card">
+                <h3>Control Room Operator</h3>
+                <p>Call monitoring & live rides only.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="card panel">
+        <header>Customization</header>
+        <div class="panel-body toggles">
+          <label class="toggle">
+            <input type="checkbox" id="modTourism" />
+            <span>Tourism Safety Mode</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="modRide" />
+            <span>Ride-Monitoring</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="modWSI" />
+            <span>Women’s Safety Index (WSI)</span>
+          </label>
+        </div>
+      </article>
+
+      <article class="card panel">
+        <header>Map API Integration</header>
+        <div class="panel-body">
+          <label class="control-inline">
+            <span>Provider</span>
+            <select id="mapProvider">
+              <option value="osm" selected>OpenStreetMap (Leaflet)</option>
+              <option value="google">Google Maps</option>
+              <option value="mapbox">Mapbox</option>
+            </select>
+          </label>
+          <label class="control-inline full">
+            <span>API Key</span>
+            <input type="password" id="mapApiKey" placeholder="Enter API Key (kept locally for demo)" />
+          </label>
+        </div>
+      </article>
+    </section>
+
+    <!-- Right: security & access logs -->
+    <aside class="right">
+      <article class="card panel">
+        <header>Data Security</header>
+        <div class="panel-body">
+          <label class="toggle">
+            <input type="checkbox" id="encryptToggle" />
+            <span>Enable data encryption (at-rest)</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="auditToggle" />
+            <span>Enable access audit logging</span>
+          </label>
+        </div>
+      </article>
+
+      
+    </aside>
+  </main>
+
+  <script src="./templates/entry.js"></script>
+  <script>
+    // Default settings
+    const defaultSettings = {
+      role: 'operator', // Default role
+      features: {
+        tourismSafety: false,
+        rideMonitoring: false,
+        wsi: false
+      },
+      map: {
+        provider: 'osm',
+        apiKey: ''
+      },
+      security: {
+        encryptData: false,
+        auditLogging: true
+      },
+      lastUpdated: new Date().toISOString()
+    };
+
+    // DOM Elements
+    const elements = {
+      // Role selection
+      roleInputs: document.querySelectorAll('input[name="role"]'),
+      
+      // Feature toggles
+      modTourism: document.getElementById('modTourism'),
+      modRide: document.getElementById('modRide'),
+      modWSI: document.getElementById('modWSI'),
+      
+      // Map settings
+      mapProvider: document.getElementById('mapProvider'),
+      mapApiKey: document.getElementById('mapApiKey'),
+      
+      // Security settings
+      encryptToggle: document.getElementById('encryptToggle'),
+      auditToggle: document.getElementById('auditToggle'),
+      
+      // Buttons
+      saveBtn: document.getElementById('saveBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      addTestEntryBtn: document.getElementById('addTestEntry'),
+      addLogBtn: document.getElementById('addLog'),
+      clearLogBtn: document.getElementById('clearLog')
+    };
+
+    // Load settings from localStorage
+    function loadSettings() {
+      try {
+        const savedSettings = localStorage.getItem('appSettings');
+        return savedSettings ? JSON.parse(savedSettings) : { ...defaultSettings };
+      } catch (e) {
+        console.error('Error loading settings:', e);
+        return { ...defaultSettings };
+      }
+    }
+
+    // Save settings to localStorage
+    function saveSettings(settings) {
+      try {
+        settings.lastUpdated = new Date().toISOString();
+        localStorage.setItem('appSettings', JSON.stringify(settings));
+        return true;
+      } catch (e) {
+        console.error('Error saving settings:', e);
+        showToast('❌ Failed to save settings');
+        return false;
+      }
+    }
+
+    // Update UI based on current settings
+    function updateUI(settings) {
+      // Update role selection
+      document.querySelector(`input[name="role"][value="${settings.role}"]`).checked = true;
+      
+      // Update feature toggles
+      elements.modTourism.checked = settings.features.tourismSafety;
+      elements.modRide.checked = settings.features.rideMonitoring;
+      elements.modWSI.checked = settings.features.wsi;
+      
+      // Update map settings
+      elements.mapProvider.value = settings.map.provider;
+      elements.mapApiKey.value = settings.map.apiKey || '';
+      
+      // Update security settings
+      elements.encryptToggle.checked = settings.security.encryptData;
+      elements.auditToggle.checked = settings.security.auditLogging;
+      
+      // Toggle API key field based on map provider
+      toggleApiKeyField();
+    }
+
+    // Toggle API key field visibility based on map provider
+    function toggleApiKeyField() {
+      const apiKeyField = elements.mapApiKey.parentElement;
+      apiKeyField.style.display = elements.mapProvider.value === 'osm' ? 'none' : 'flex';
+    }
+
+    // Collect settings from form
+    function collectSettings() {
+      const settings = { ...defaultSettings };
+      
+      // Get selected role
+      const selectedRole = document.querySelector('input[name="role"]:checked');
+      settings.role = selectedRole ? selectedRole.value : defaultSettings.role;
+      
+      // Get feature toggles
+      settings.features = {
+        tourismSafety: elements.modTourism.checked,
+        rideMonitoring: elements.modRide.checked,
+        wsi: elements.modWSI.checked
+      };
+      
+      // Get map settings
+      settings.map = {
+        provider: elements.mapProvider.value,
+        apiKey: elements.mapApiKey.value.trim()
+      };
+      
+      // Get security settings
+      settings.security = {
+        encryptData: elements.encryptToggle.checked,
+        auditLogging: elements.auditToggle.checked
+      };
+      
+      return settings;
+    }
+
+    // Initialize the settings page
+    function initSettings() {
+      const settings = loadSettings();
+      updateUI(settings);
+      
+      // Add event listeners
+      elements.mapProvider.addEventListener('change', toggleApiKeyField);
+      
+      // Save button
+      if (elements.saveBtn) {
+        elements.saveBtn.addEventListener('click', () => {
+          const newSettings = collectSettings();
+          if (saveSettings(newSettings)) {
+            showToast('✅ Settings saved successfully');
+            console.log('Settings saved:', newSettings);
+          }
+        });
+      }
+      
+      // Reset button
+      if (elements.resetBtn) {
+        elements.resetBtn.addEventListener('click', () => {
+          if (confirm('Are you sure you want to reset all settings to default?')) {
+            if (saveSettings({ ...defaultSettings })) {
+              updateUI(defaultSettings);
+              showToast('✅ Settings reset to defaults');
+            }
+          }
+        });
+      }
+      
+      // Add test entry button - redirect to add.html
+      if (elements.addTestEntryBtn) {
+        elements.addTestEntryBtn.addEventListener('click', () => {
+          // Redirect to add.html to create a new entry
+          window.location.href = 'add.html';
+        });
+      }
+      
+      // Log buttons
+      if (elements.addLogBtn) {
+        elements.addLogBtn.addEventListener('click', () => {
+          // Add log entry functionality here
+          showToast('Log entry added');
+        });
+      }
+      
+      if (elements.clearLogBtn) {
+        elements.clearLogBtn.addEventListener('click', () => {
+          if (confirm('Clear all log entries?')) {
+            // Clear log functionality here
+            showToast('Log cleared');
+          }
+        });
+      }
+      
+      console.log('Settings page initialized with:', settings);
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', initSettings);
+
+    // Ensure HTTPS for external resources
+    if (window.location.protocol === 'https:') {
+      document.querySelectorAll('link[href^="http:"]').forEach(link => {
+        link.href = link.href.replace(/^http:/, 'https:');
+      });
+      document.querySelectorAll('img[src^="http:"]').forEach(img => {
+        img.src = img.src.replace(/^http:/, 'https:');
+      });
+    }
+  </script>
+  <script src="./set.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>112 Analytics Goa - Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/static/css/map-styles.css" />
+  <link rel="stylesheet" href="/static/css/zone-styles.css" />
+  <!-- Add Leaflet.heat plugin -->
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+</head>
+<body>
+  <div class="background"></div>
+
+  <!-- Top Navigation Bar -->
+  <nav class="topbar" role="navigation" aria-label="Primary">
+    <div class="tb-left">
+      <div class="logo-txt">112 Analytics Goa</div>
+      <ul class="nav-links">
+        <li><a href="dashboard.html" class="active">Dashboard</a></li>
+        <li><a href="hot_updated.html">Hotspots</a></li>
+        <li><a href="ride.html">Ride-Safety</a></li>
+        <li><a href="alert.html">Alerts</a></li>
+        <li><a href="temp.html">Analytics</a></li>
+        <li><a href="set.html">Settings</a></li>
+      </ul>
+    </div>
+    <div class="tb-right">
+      <div class="user">
+        <img src="https://api.dicebear.com/7.x/initials/svg?seed=GP" alt="User" class="avatar" />
+        <span class="u-name">Supervisor</span>
+      </div>
+      <button class="btn btn-logout" onclick="logout()" title="Logout">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Main Layout -->
+  <main class="layout">
+    <!-- Left: KPI Cards -->
+    <section class="kpis">
+      <article class="card hoverable" id="kpi-total-calls">
+        <header>Total Calls Today</header>
+        <div class="metric">
+          <span class="value" id="totalCalls">0</span>
+          <span class="trend up" id="totalTrend">▲ 8%</span>
+        </div>
+      </article>
+
+      <article class="card hoverable danger" id="kpi-women-calls">
+        <header>Women’s Safety Calls</header>
+        <div class="metric">
+          <span class="value" id="womenCalls">0</span>
+          <span class="badge critical">High</span>
+        </div>
+      </article>
+
+      <article class="card hoverable" id="kpi-avg-response">
+        <header>Average Response Time</header>
+        <div class="metric">
+          <span class="value" id="avgResp">--</span>
+          <span class="sub">Benchmark: 5m</span>
+        </div>
+      </article>
+
+      <article class="card hoverable" id="kpi-hotspots">
+        <header>High-Risk Zones</header>
+        <ol id="hotspotList" class="hotspots"></ol>
+      </article>
+    </section>
+
+    <!-- Center: Map Panel -->
+    <section class="map-panel card" aria-labelledby="mapTitle">
+      <div class="panel-top">
+        <h2 id="mapTitle">Goa Incidents Map</h2>
+        <div class="tabs" role="tablist" aria-label="Map Layers">
+          <button class="toggle active" data-zone="incidents" role="tab">All Incidents</button>
+          <button class="toggle" data-zone="crime" role="tab">Crime Hotspots</button>
+          <button class="toggle" data-zone="accident" role="tab">Accident Zones</button>
+          <button class="toggle" data-zone="tourism" role="tab">Tourism Safety</button>
+        </div>
+        <div class="map-controls">
+          <button id="refreshData" class="btn btn-small" title="Refresh data">
+            <i class="icon-refresh"></i> Refresh
+          </button>
+        </div>
+      </div>
+      <div class="map-container">
+        <!-- Map Filters -->
+        <div id="mapFilters" class="map-filters-container"></div>
+        
+        <!-- Map -->
+        <div class="map" id="map" aria-live="polite">
+          <div class="loading-overlay" id="mapLoading">
+            <div class="spinner"></div>
+            <div>Loading incident data...</div>
+          </div>
+        </div>
+        <div id="tooltip" class="tooltip" hidden></div>
+        
+        <!-- Zone Toggle Buttons -->
+        <div class="zone-toggle-container">
+          <button class="zone-toggle-btn active" data-zone="crime">
+            <i class="fas fa-shield-alt"></i>
+            <span>Crime Zones</span>
+          </button>
+          <button class="zone-toggle-btn" data-zone="accident">
+            <i class="fas fa-car-crash"></i>
+            <span>Accident Zones</span>
+          </button>
+          <button class="zone-toggle-btn" data-zone="tourism">
+            <i class="fas fa-umbrella-beach"></i>
+            <span>Tourist Zones</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Zone Details Section -->
+      <div class="zone-details-container">
+        <div class="zone-details" id="crimeZoneDetails">
+          <h3><i class="fas fa-shield-alt"></i> High Crime Zones in Goa</h3>
+          <div class="zone-stats">
+            <div class="stat-card">
+              <div class="stat-value" id="crimeHotspots">0</div>
+              <div class="stat-label">Hotspots</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="crimeTrend">--</div>
+              <div class="stat-label">This Month</div>
+            </div>
+          </div>
+          <div class="zone-list" id="crimeZoneList">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+        
+        <div class="zone-details" id="accidentZoneDetails" style="display: none;">
+          <h3><i class="fas fa-car-crash"></i> Accident Prone Areas</h3>
+          <div class="zone-stats">
+            <div class="stat-card">
+              <div class="stat-value" id="accidentHotspots">0</div>
+              <div class="stat-label">Black Spots</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="accidentTrend">--</div>
+              <div class="stat-label">This Month</div>
+            </div>
+          </div>
+          <div class="zone-list" id="accidentZoneList">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+        
+        <div class="zone-details" id="tourismZoneDetails" style="display: none;">
+          <h3><i class="fas fa-umbrella-beach"></i> Tourist Hotspots</h3>
+          <div class="zone-stats">
+            <div class="stat-card">
+              <div class="stat-value" id="tourismHotspots">0</div>
+              <div class="stat-label">Key Areas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="tourismDensity">--</div>
+              <div class="stat-label">Density</div>
+            </div>
+          </div>
+          <div class="zone-list" id="tourismZoneList">
+            <!-- Will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-title">Incident Types:</div>
+        <span><i class="dot blue"></i> General</span>
+        <span><i class="dot red"></i> Women's Safety</span>
+        <span><i class="dot yellow"></i> Accidents</span>
+        <span><i class="dot purple"></i> Theft/Robbery</span>
+      </div>
+    </section>
+
+    <!-- Right: Live Feed -->
+    <aside class="live-feed card" aria-labelledby="feedTitle">
+      <div class="panel-top">
+        <h2 id="feedTitle">Live Feed</h2>
+      </div>
+      <ul id="feedList" class="feed"></ul>
+      <div class="feed-hints">
+        <span class="status attended">Attended</span>
+        <span class="status pending">Escalation Pending</span>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // Global map variable
+    let map;
+    
+    // Function to initialize the map
+    function initMap() {
+      // Set the initial view to Goa's coordinates
+      map = L.map('map').setView([15.2993, 74.1240], 10);
+      
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 18
+      }).addTo(map);
+      
+      // Add scale control
+      L.control.scale({imperial: false}).addTo(map);
+      
+      // Initialize zone handler
+      if (typeof initZoneHandler === 'function') {
+        initZoneHandler();
+      }
+      
+      // Call loadCSVData after map is initialized
+      if (typeof loadCSVData === 'function') {
+        loadCSVData();
+      }
+      
+      // Add event listeners for map layer toggles
+      document.querySelectorAll('.tabs .toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+          const zoneType = this.getAttribute('data-zone');
+          // Remove active class from all toggles
+          document.querySelectorAll('.tabs .toggle').forEach(t => t.classList.remove('active'));
+          // Add active class to clicked toggle
+          this.classList.add('active');
+          // Toggle the zone
+          if (zoneType === 'incidents') {
+            // Show all incidents
+            if (window.markers) {
+              map.addLayer(window.markers);
+            }
+            if (window.zoneLayer) {
+              map.removeLayer(window.zoneLayer);
+            }
+          } else {
+            // Show zone data
+            if (window.markers) {
+              map.removeLayer(window.markers);
+            }
+            updateMapWithZoneData(zoneType);
+          }
+        });
+      });
+    }
+    
+    // Initialize map when DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', initMap);
+    
+    function logout() {
+      // In a real app, this would invalidate the session
+      sessionStorage.clear();
+      window.location.href = 'log.html';
+    }
+  </script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Papa Parse for CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Dashboard Data Integration -->
+  <script src="/static/js/dashboard-data.js"></script>
+  <!-- Zone Handler -->
+  <script src="/static/js/zone-handler.js"></script>
+  <!-- Main dashboard JS -->
+  <script src="/static/js/dashboard.js"></script>
+  <script src="static/js/chatbot-widget.js"></script>
+</body>
+</html>

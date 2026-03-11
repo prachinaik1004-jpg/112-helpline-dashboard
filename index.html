@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>112 Analytics Goa - Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --brand: #0f5132;
+      --brand-light: #166534;
+      --accent: #10b981;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .login-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      padding: 40px;
+      text-align: center;
+    }
+    
+    .logo {
+      margin-bottom: 24px;
+    }
+    
+    .logo img {
+      height: 64px;
+      margin-bottom: 16px;
+    }
+    
+    h1 {
+      margin: 0 0 8px;
+      color: var(--brand);
+      font-size: 1.5rem;
+    }
+    
+    .subtitle {
+      color: var(--muted);
+      margin: 0 0 32px;
+      font-size: 0.95rem;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--brand);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: var(--brand-light);
+    }
+    
+    .error-message {
+      color: #dc2626;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
+  <script>
+    // Redirect index.html to log.html so the app lands on the login page by default
+    window.location.replace('log.html');
+  </script>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo">
+      <img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <h1>112 Analytics Goa</h1>
+      <p class="subtitle">Emergency Response System</p>
+    </div>
+    
+    <form id="loginForm" onsubmit="return handleLogin(event)">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter your username" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required>
+      </div>
+      
+      <button type="submit" class="btn">Sign In</button>
+      <div id="errorMessage" class="error-message">
+        Invalid username or password. Please try again.
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function handleLogin(event) {
+      event.preventDefault();
+      
+      // Simple validation
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorElement = document.getElementById('errorMessage');
+      
+      // For demo purposes, accept any non-empty username/password
+      if (username && password) {
+        // Store login state in sessionStorage
+        sessionStorage.setItem('isAuthenticated', 'true');
+        
+        // Redirect to dashboard
+        window.location.href = '/dash.html';
+      } else {
+        errorElement.style.display = 'block';
+      }
+      
+      return false;
+    }
+    
+    // Check if already logged in
+    if (sessionStorage.getItem('isAuthenticated') === 'true') {
+      window.location.href = '/dash.html';
+    }
+  </script>
+</body>
+</html>

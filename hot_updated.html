@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goa Risk Areas - 112 Analytics</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css" />
+  <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #f5f7fa; /* Light gray background */
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+      background-color: #ffffff; /* White background for the app container */
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+      max-width: 1800px; /* Max width for larger screens */
+      margin: 0 auto; /* Center the container */
+    }
+
+    .header {
+      background: #0f5132;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      height: 32px;
+      border-radius: 4px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      text-decoration: none;
+      background: white;
+      color: #0f5132;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #f0f0f0;
+    }
+
+    .map-container {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 60px);
+      background-color: #e9ecef; /* Slightly darker background for the map container */
+      border-top: 1px solid #dee2e6; /* Subtle border at the top */
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Legend */
+    .legend {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      line-height: 1.5;
+    }
+
+    .legend h3 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1rem;
+      color: #333;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+
+    .risk-high { background-color: #ef4444; }
+    .risk-medium { background-color: #f59e0b; }
+    .risk-low { background-color: #10b981; }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.1rem;
+      }
+      
+      .btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <h1><img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" class="logo"> 112 Analytics - Risk Areas</h1>
+      <a href="/dash.html" class="btn">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </header>
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize the map centered on Goa
+      const map = L.map('map').setView([15.2993, 74.1240], 11);
+      
+      // Add OpenStreetMap tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      // Add scale control
+      L.control.scale().addTo(map);
+
+      // Add legend
+      const legend = L.control({ position: 'bottomright' });
+      legend.onAdd = function() {
+        const div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = `
+          <h3>Risk Legend</h3>
+          <div class="legend-item">
+            <div class="legend-color risk-high"></div>
+            <span>High Risk</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color risk-medium"></div>
+            <span>Medium Risk</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color risk-low"></div>
+            <span>Low Risk</span>
+          </div>
+        `;
+        return div;
+      };
+      legend.addTo(map);
+
+      // Sample CSV data (replace with your actual CSV loading logic)
+      const csvData = `latitude,longitude,risk_level,description
+15.4909,73.8278,high,Panjim City Center
+15.5000,73.8300,high,Panjim Market Area
+15.4950,73.8350,high,Panjim Bus Stand
+15.5915,73.8090,medium,Mapusa City Center
+15.5950,73.8100,medium,Mapusa Market
+15.2739,73.9587,low,Margao City Center
+15.2750,73.9600,low,Margao Station`;
+
+      // Parse CSV data
+      const results = Papa.parse(csvData, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true
+      });
+
+      // Process data for heatmap
+      const heatData = results.data.map(row => {
+        // Convert risk level to intensity (0-1)
+        let intensity = 0.3; // Default to low risk
+        if (row.risk_level === 'high') intensity = 0.8;
+        else if (row.risk_level === 'medium') intensity = 0.6;
+        
+        return [row.latitude, row.longitude, intensity];
+      });
+
+      // Create markers for each data point with custom icons based on risk level
+      const markers = L.layerGroup();
+      
+      results.data.forEach(row => {
+        let iconColor = 'green'; // Default to low risk
+        if (row.risk_level === 'high') iconColor = 'red';
+        else if (row.risk_level === 'medium') iconColor = 'orange';
+        
+        const marker = L.circleMarker([row.latitude, row.longitude], {
+          radius: 8,
+          fillColor: iconColor,
+          color: '#fff',
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
+        });
+        
+        marker.bindPopup(`
+          <div style="min-width: 200px">
+            <h4 style="margin: 0 0 5px 0; color: ${iconColor};">
+              ${row.description}
+            </h4>
+            <p style="margin: 5px 0;">
+              <strong>Risk Level:</strong> 
+              <span style="color: ${iconColor}; font-weight: bold; text-transform: capitalize;">
+                ${row.risk_level} risk
+              </span>
+            </p>
+            <p style="margin: 5px 0 0 0; font-size: 0.9em; color: #666;">
+              Click to view details
+            </p>
+          </div>
+        `);
+        
+        markers.addLayer(marker);
+      });
+
+      // Create heatmap layer
+      const heat = L.heatLayer(heatData, {
+        radius: 25,
+        blur: 15,
+        maxZoom: 17,
+        max: 1.0,
+        gradient: {
+          0.4: 'blue',   // Low risk
+          0.6: 'orange', // Medium risk
+          0.8: 'red'     // High risk
+        }
+      }).addTo(map);
+      
+      // Add markers to the map
+      markers.addTo(map);
+      
+      // Add layer control to toggle between heatmap and markers
+      const baseLayers = {
+        'Heatmap': heat,
+        'Markers': markers
+      };
+      
+      L.control.layers(null, baseLayers, {collapsed: false}).addTo(map);
+      
+      // Add drawing control
+      const drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+      
+      const drawControl = new L.Control.Draw({
+        edit: {
+          featureGroup: drawnItems
+        },
+        draw: {
+          polygon: true,
+          rectangle: true,
+          circle: false,
+          marker: false,
+          circlemarker: false,
+          polyline: false
+        }
+      });
+      
+      map.addControl(drawControl);
+      
+      // Handle drawing events
+      map.on(L.Draw.Event.CREATED, function (e) {
+        const layer = e.layer;
+        drawnItems.addLayer(layer);
+        
+        // Add popup to the drawn shape
+        const area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+        const areaKm2 = (area / 1000000).toFixed(2);
+        
+        layer.bindPopup(`
+          <div style="min-width: 200px">
+            <h4 style="margin: 0 0 5px 0;">Custom Zone</h4>
+            <p style="margin: 5px 0;">
+              <strong>Area:</strong> ${areaKm2} km²
+            </p>
+            <div class="legend-item" style="margin: 5px 0 0 0;">
+              <div class="legend-color" style="background-color: #3182ce;"></div>
+              <span>Marked Zone</span>
+            </div>
+          </div>
+        `);
+        
+        // Style the drawn shape
+        layer.setStyle({
+          color: '#3182ce',
+          weight: 2,
+          opacity: 0.8,
+          fillColor: '#3182ce',
+          fillOpacity: 0.2
+        });
+      });
+
+      // Load data from your CSV file
+      fetch('dataset.csv')
+        .then(response => response.text())
+        .then(csvData => {
+          // Parse CSV data
+          const results = Papa.parse(csvData, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true
+          });
+
+          // Helpers
+          const headers = results.meta && results.meta.fields ? results.meta.fields : [];
+          const lower = (s) => (s || '').toString().trim().toLowerCase();
+          const findCol = (candidates) => {
+            const idx = headers.findIndex(h => candidates.includes(lower(h)));
+            return idx >= 0 ? headers[idx] : null;
+          };
+          const riskToStyle = (val) => {
+            const v = lower(val);
+            if (["high","red","severe","critical"].includes(v)) return { intensity: 0.8, color: 'red', label: 'high' };
+            if (["low","green","minor"].includes(v)) return { intensity: 0.3, color: 'green', label: 'low' };
+            if (["medium","moderate","orange"].includes(v)) return { intensity: 0.6, color: 'orange', label: 'medium' };
+            return { intensity: 0.5, color: 'orange', label: v || 'medium' };
+          };
+
+          // Attempt to detect latitude/longitude columns
+          const latCol = findCol(['latitude','lat','y','lat_dd','latitude_dd']);
+          const lonCol = findCol(['longitude','lon','lng','x','long','long_dd','longitude_dd']);
+          const riskCol = findCol(['risk_level','risk','severity','level','event_main_type','signal_type']);
+
+          // Station -> approximate coordinates (Goa)
+          const stationCoords = {
+            'panaji ps': [15.4989, 73.8278],
+            'panjim ps': [15.4989, 73.8278],
+            'pana ji ps': [15.4989, 73.8278],
+            'mapusa ps': [15.5915, 73.8090],
+            'calangute ps': [15.5439, 73.7553],
+            'calangute': [15.5439, 73.7553],
+            'anjuna ps': [15.5873, 73.7449],
+            'mandrem ps': [15.6620, 73.7397],
+            'old goa ps': [15.5036, 73.9103],
+            'old goa': [15.5036, 73.9103],
+            'collem ps': [15.3333, 74.2167],
+            'canacona ps': [15.0170, 74.0500],
+            'sanguem ps': [15.2290, 74.1656],
+            'curchorem ps': [15.2633, 74.1085],
+            'cuncolim ps': [15.1773, 73.9935],
+            'colvale ps': [15.6274, 73.8421],
+            'ponda ps': [15.4030, 74.0120],
+            'margao ps': [15.2950, 73.9570],
+            'bicholim ps': [15.5950, 73.9450],
+            'porvorim ps': [15.5600, 73.8080],
+            'pernem ps': [15.7230, 73.7950],
+            'valpoi ps': [15.5320, 74.1360],
+            'quepem ps': [15.2230, 74.0700],
+            'vasco ps': [15.3980, 73.8150],
+            'colva ps': [15.2790, 73.9200]
+          };
+
+          const stationCol = findCol([
+            'police_station_name','police station name','police_station','police station','ps','p.s.','police station (name)','police_station (name)'
+          ]);
+
+          const rows = results.data || [];
+          const coords = [];
+          const newMarkers = [];
+
+          if (latCol && lonCol) {
+            // Use numeric latitude/longitude from dataset
+            rows.forEach(r => {
+              const lat = parseFloat(r[latCol]);
+              const lon = parseFloat(r[lonCol]);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                const style = riskToStyle(r[riskCol]);
+                coords.push([lat, lon, style.intensity]);
+                newMarkers.push({ lat, lon, style, label: r['description'] || r['event_information'] || r['EVENT_INFORMATION'] || '' });
+              }
+            });
+          } else if (stationCol) {
+            // Map by police station name
+            rows.forEach(r => {
+              const raw = (r[stationCol] || '').toString();
+              // Remove parentheses and normalize
+              const norm = lower(raw.replace(/\(.*?\)/g, '')).replace(/\s+/g, ' ').trim();
+              // Try exact, then with ' ps' suffix if missing
+              let key = norm;
+              if (!stationCoords[key] && !key.endsWith(' ps')) key = key + ' ps';
+              const ll = stationCoords[key];
+              if (ll) {
+                const style = riskToStyle(r[riskCol] || r['EVENT_MAIN_TYPE'] || r['Signal_Type']);
+                coords.push([ll[0], ll[1], style.intensity]);
+                const label = r['event_information'] || r['EVENT_INFORMATION'] || raw || 'Data point';
+                newMarkers.push({ lat: ll[0], lon: ll[1], style, label });
+              }
+            });
+          }
+
+          if (coords.length > 0) {
+            // Update heatmap and markers
+            heat.setLatLngs(coords);
+            markers.clearLayers();
+            newMarkers.forEach(m => {
+              const mk = L.circleMarker([m.lat, m.lon], {
+                radius: 7,
+                fillColor: m.style.color,
+                color: '#fff',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.85
+              });
+              mk.bindPopup(`<div style="min-width:200px"><strong>${m.label}</strong><div style="margin-top:6px; color:#6b7280;">Risk: ${m.style.label}</div></div>`);
+              markers.addLayer(mk);
+            });
+
+            // Fit bounds to new data
+            const bounds = coords.reduce((b, c) => b.extend([c[0], c[1]]), L.latLngBounds([coords[0][0], coords[0][1]], [coords[0][0], coords[0][1]]));
+            map.fitBounds(bounds, { padding: [50, 50] });
+          } else {
+            console.warn('dataset.csv loaded, but no mappable coordinates detected (no lat/lon columns and no recognized station names).');
+          }
+        })
+        .catch(error => {
+          console.error('Error loading CSV data:', error);
+          alert('Error loading risk data. Using sample data instead.');
+        });
+    });
+  </script>
+</body>
+</html>

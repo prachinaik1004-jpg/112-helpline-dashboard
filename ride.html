@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ride-Safety SOS Monitoring - 112 Goa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./ride.css" />
+  <link rel="stylesheet" href="./safe.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="background"></div>
+
+  <!-- Top Bar -->
+  <header class="filters" role="region" aria-label="Ride-Safety">
+    <div class="brand-mini">
+      <img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <span>Ride-Safety Monitoring</span>
+    </div>
+    <div class="header-actions">
+      <a class="btn gradient sm back-btn" href="./dash.html" title="Back to Dashboard">← Back</a>
+      <button id="safetyAssistBtn" class="btn danger sm" title="Safety Assist">
+        <i class="fas fa-shield-alt"></i> Safety Assist
+      </button>
+    </div>
+    <div class="filters-row">
+      <label class="control">
+        <span>Filter</span>
+        <select id="rideFilter">
+          <option value="all" selected>All</option>
+          <option value="on-route">On Route</option>
+          <option value="deviated">Deviated</option>
+          <option value="sos-alert">SOS Alert</option>
+        </select>
+      </label>
+      <button id="refreshBtn" class="btn gradient">Refresh</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="layout">
+    <!-- Active rides table -->
+    <section class="card table-card">
+      <header>Active Rides</header>
+      <div class="table-wrap">
+        <table class="rides" id="ridesTable" aria-label="Active Rides Table">
+          <thead>
+            <tr>
+              <th>Passenger</th>
+              <th>Phone</th>
+              <th>From → To</th>
+              <th>GPS</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Route Timeline Viewer -->
+    <section class="card route-viewer">
+      <header>
+        <h2>Route Timeline Viewer</h2>
+        <div class="route-info" id="routeInfo">
+          <span class="passenger-name">Select a ride to view details</span>
+        </div>
+      </header>
+      <div class="route-map-container">
+        <div id="routeMap" class="route-map"></div>
+        <div class="map-legend">
+          <span><div class="legend-line expected"></div> Expected Route</span>
+          <span><div class="legend-line actual"></div> Actual Route</span>
+          <span><div class="legend-line deviation"></div> Deviations</span>
+          <span><div class="legend-marker current"></div> Current Location</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Panel: Audio/SMS Verification Logs -->
+  <section class="bottom-panel">
+    <div class="card logs-panel">
+      <header>
+        <h3>Audio/SMS Verification Logs</h3>
+        <div class="log-controls">
+          <button id="clearLogsBtn" class="btn sm">Clear Logs</button>
+          <button id="exportLogsBtn" class="btn gradient sm">Export</button>
+        </div>
+      </header>
+      <div class="logs-container">
+        <ul id="verificationLogs" class="verification-logs"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Socket.IO Client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="./ride.js" defer></script>
+  <script src="./safe.js" defer></script>
+</body>
+</html>

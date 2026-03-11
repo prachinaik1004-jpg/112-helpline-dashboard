@@ -1,0 +1,1191 @@
+(function () {
+  'use strict';
+
+  // Elements
+  const totalEl = () => document.getElementById('totalCalls');
+  const trendEl = () => document.getElementById('totalTrend');
+  const womenEl = () => document.getElementById('womenCalls');
+  const avgRespEl = () => document.getElementById('avgResp');
+  const hotspotList = () => document.getElementById('hotspotList');
+  const mapEl = () => document.getElementById('map');
+  const tooltip = () => document.getElementById('tooltip');
+  const feedList = () => document.getElementById('feedList');
+
+  const toggles = () => Array.from(document.querySelectorAll('.toggle-group .toggle'));
+
+  // Approximate Goa station/area coordinates for plotting
+  const AREA_COORDS = {
+    'PANAJI': { lat: 15.4909, lng: 73.8278 },
+    'PANJIM': { lat: 15.4909, lng: 73.8278 },
+    'MARGAO': { lat: 15.2993, lng: 74.1240 },
+    'VASCO': { lat: 15.3960, lng: 73.8157 },
+    'MAPUSA': { lat: 15.5937, lng: 73.8070 },
+    'PONDA': { lat: 15.4013, lng: 74.0071 },
+    'CALANGUTE': { lat: 15.5394, lng: 73.7554 },
+    'BICHOLIM': { lat: 15.6000, lng: 73.9500 },
+    'PORVORIM': { lat: 15.5530, lng: 73.8090 },
+    'MANDREM': { lat: 15.6580, lng: 73.7460 },
+    'CANACONA': { lat: 15.0160, lng: 74.0500 },
+    'MAINA CURTORIM': { lat: 15.2489, lng: 73.9860 },
+    'MOPA': { lat: 15.7290, lng: 73.8140 },
+    'OLD GOA': { lat: 15.4989, lng: 73.9122 },
+    'ANJUNA': { lat: 15.5873, lng: 73.7447 },
+    'VERNA': { lat: 15.3375, lng: 73.9313 }
+  };
+  
+  const TYPES = [
+    { key: 'accident', label: 'Accident', color: '#2563eb' },
+    { key: 'women', label: 'Women\'s Safety', color: '#dc2626' },
+    { key: 'crime', label: 'Crime', color: '#eab308' },
+    { key: 'other', label: 'Other', color: '#6b7280' }
+  ];
+
+  const AREAS = [
+    { name: 'Panaji', lat: 15.4909, lng: 73.8278 },
+    { name: 'Margao', lat: 15.2993, lng: 74.1240 },
+    { name: 'Vasco', lat: 15.3960, lng: 73.8157 },
+    { name: 'Mapusa', lat: 15.5937, lng: 73.8070 },
+    { name: 'Calangute', lat: 15.5394, lng: 73.7554 }
+  ];
+  
+  // Leaflet map instance
+  let goaMap = null;
+  let incidentMarkers = [];
+  let zoneCircles = [];
+  let currentZoneData = null;
+
+  function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function typeMeta(key) {
+    return TYPES.find(t => t.key === key) || TYPES.find(t => t.key === 'other');
+  }
+
+  // Fetch aggregate stats from server (/api/stats)
+  async function fetchStats() {
+    try {
+      const res = await fetch('/api/stats');
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Failed to load stats');
+      return data.stats;
+    } catch (e) {
+      console.error('Error fetching /api/stats:', e);
+      return null;
+    }
+  }
+
+  function areaToCoords(areaText) {
+    if (!areaText) return null;
+    const key = areaText.toUpperCase();
+    // Try direct
+    if (AREA_COORDS[key]) return AREA_COORDS[key];
+    // Try substring match
+    for (const name in AREA_COORDS) {
+      if (key.includes(name)) return AREA_COORDS[name];
+    }
+    return null;
+  }
+
+  function minutesAgoFromISO(iso) {
+    const t = new Date(iso);
+    const diffMin = Math.max(0, Math.round((Date.now() - t.getTime()) / 60000));
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const h = Math.floor(diffMin / 60), m = diffMin % 60;
+    return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
+  }
+
+  async function fetchIncidents() {
+    const res = await fetch('/api/alerts');
+    
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    
+    if (!data.success) throw new Error(data.error || 'Failed to load alerts');
+
+    // Map API alerts to incident objects used by dashboard
+    const mapped = data.alerts.map((a) => {
+      // Derive type from EVENT_MAIN_TYPE primarily
+      let key = 'other';
+      const emt = (a.EVENT_MAIN_TYPE || '').toLowerCase();
+      if (emt.includes('accident')) key = 'accident';
+      else if (emt.includes('women')) key = 'women';
+      else if (emt.includes('assault') || emt.includes('fight') || emt.includes('threat')) key = 'crime';
+      else if ((a.type || '').toLowerCase() === 'panic') key = 'crime';
+
+      const tm = typeMeta(key);
+      const areaName = a.Police_Station_Name || a.location || 'Goa';
+      const coords = areaToCoords(areaName) || areaToCoords(a.location) || { lat: 15.4909, lng: 73.8278 };
+
+      // Status: attended if REACH_TIME exists, else pending
+      const status = (a.REACH_TIME && String(a.REACH_TIME).trim() && a.REACH_TIME !== '--:--:--') ? 'attended' : 'pending';
+
+      // Response minutes from duration or raw fields
+      const durSec = typeof a.duration === 'number' ? a.duration : 0;
+      const respMin = Math.max(1, Math.round((durSec || 300) / 60));
+
+      // Priority rules based on dataset
+      const priority = key === 'women' || status === 'pending' ? 'high' : (respMin > 10 ? 'medium' : 'low');
+
+      return {
+        id: a.id,
+        type: key,
+        typeLabel: tm.label,
+        color: tm.color,
+        area: areaName,
+        lat: coords.lat,
+        lng: coords.lng,
+        time: minutesAgoFromISO(a.timestamp),
+        status,
+        respMin,
+        priority
+      };
+    });
+
+    // Sort similar to previous logic
+    return mapped.sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'pending' ? -1 : 1;
+      return a.priority === 'high' ? -1 : 1;
+    });
+  }
+
+  // Fetch and display past 112 calls with filters
+  async function fetchActiveCalls() {
+    try {
+      // Add loading state
+      const activeCallsList = document.getElementById('activeCallsList');
+      if (activeCallsList) {
+        activeCallsList.innerHTML = '<div class="loading-state">Loading call history...</div>';
+      }
+      
+      // Get filter values
+      const days = document.getElementById('daysRange').value;
+      const status = document.getElementById('statusFilter').value !== 'all' 
+        ? document.getElementById('statusFilter').value 
+        : undefined;
+      
+      // Build query string
+      const params = new URLSearchParams();
+      if (days) params.append('days', days);
+      if (status) params.append('status', status);
+      
+      const url = `/api/active?${params.toString()}`;
+      const res = await fetch(url);
+      
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      const data = await res.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load call history');
+      }
+      
+      // Update days filter display
+      const daysFilterEl = document.getElementById('daysFilter');
+      if (daysFilterEl) {
+        const daysText = days === '0' ? 'all time' : `${days} days`;
+        daysFilterEl.textContent = daysText;
+      }
+      
+      return data;
+    } catch (e) {
+      console.error('Error fetching calls:', e);
+      return { 
+        calls: [], 
+        stats: { 
+          totalCalls: 0, 
+          unattended: 0, 
+          attended: 0 
+        } 
+      };
+    }
+  }
+
+  // Update the calls list in the UI with enhanced display
+  function updateActiveCallsList(data) {
+    const { calls, stats } = data;
+    const activeCallsList = document.getElementById('activeCallsList');
+    if (!activeCallsList) return;
+
+    // Update stats display
+    updateCallStats(stats);
+
+    if (!calls || calls.length === 0) {
+      const days = document.getElementById('daysRange').value;
+      const timeText = days === '0' ? '' : ` in the last ${days} days`;
+      
+      activeCallsList.innerHTML = `
+        <div class="no-calls">
+          <i class="icon">📞</i>
+          <p>No 112 calls found${timeText}</p>
+        </div>`;
+      return;
+    }
+
+    // Group calls by date
+    const callsByDate = {};
+    calls.forEach(call => {
+      const dateStr = call.formattedDate;
+      if (!callsByDate[dateStr]) {
+        callsByDate[dateStr] = [];
+      }
+      callsByDate[dateStr].push(call);
+    });
+
+    // Generate HTML for each date group
+    let html = '';
+    for (const [date, dateCalls] of Object.entries(callsByDate)) {
+      html += `
+        <div class="call-date-group">
+          <div class="date-header">${date}</div>
+          <div class="call-list">
+            ${dateCalls.map(call => renderCallItem(call)).join('')}
+          </div>
+        </div>`;
+    }
+
+    activeCallsList.innerHTML = html;
+  }
+
+  // Get appropriate icon for call type
+  function getCallIcon(callType) {
+    const type = (callType || '').toLowerCase();
+    
+    if (type.includes('accident') || type.includes('crash')) {
+      return '🚗';
+    } else if (type.includes('medical') || type.includes('health') || type.includes('ambulance')) {
+      return '🚑';
+    } else if (type.includes('fire')) {
+      return '🚒';
+    } else if (type.includes('women') || type.includes('harassment') || type.includes('assault')) {
+      return '🚺';
+    } else if (type.includes('theft') || type.includes('robbery') || type.includes('burglary')) {
+      return '👮';
+    } else if (type.includes('disturbance') || type.includes('noise') || type.includes('fight')) {
+      return '🔊';
+    } else if (type.includes('missing')) {
+      return '🔍';
+    } else {
+      return '📞';
+    }
+  }
+  
+  // Render a single call item
+  function renderCallItem(call) {
+    const callTime = new Date(call.timestamp);
+    const isUnattended = call.status === 'unattended';
+    const callType = call.type || 'Emergency';
+    const location = call.location || 'Location not specified';
+    const summary = call.summary || 'No details available';
+    const duration = call.duration ? `${call.duration} min` : 'N/A';
+    
+    // Format time as HH:MM AM/PM
+    const formattedTime = callTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    // Get priority indicator if available
+    const priorityIndicator = call.priority === 'high' ? '🔴 ' : 
+                             call.priority === 'medium' ? '🟠 ' : '🔵 ';
+    
+    return `
+      <div class="call-item status-${call.status}" data-call-id="${call.id}">
+        <div class="call-icon" role="img" aria-label="${callType} call">
+          ${getCallIcon(callType)}
+        </div>
+        <div class="call-content">
+          <div class="call-header">
+            <div class="call-type" title="${callType}">
+              ${priorityIndicator}${callType}
+            </div>
+            <div class="call-time" title="${callTime.toLocaleString()}">
+              ${formattedTime}
+            </div>
+          </div>
+          <div class="call-location" title="${location}">
+            <i class="fas fa-map-marker-alt"></i>
+            ${location}
+          </div>
+          <div class="call-summary" title="${summary}">
+            ${summary}
+          </div>
+          <div class="call-status">
+            <span class="status-badge ${call.status}">
+              <i class="fas ${call.status === 'attended' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+              ${call.status === 'attended' ? 'Attended' : 'Unattended'}
+            </span>
+            <span class="call-duration">
+              <i class="far fa-clock"></i>
+              ${duration}
+            </span>
+            ${isUnattended ? '<span class="attention-flag"><i class="fas fa-exclamation-triangle"></i> Needs Attention</span>' : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Update the call statistics in the UI
+  function updateCallStats(stats) {
+    if (!stats) return;
+    
+    // Update the active calls count
+    const activeCallsEl = document.getElementById('activeCallsCount');
+    if (activeCallsEl) {
+      activeCallsEl.textContent = stats.totalCalls;
+      activeCallsEl.closest('.kpi-card').style.display = 'flex';
+      
+      // Add warning class if there are unattended calls
+      if (stats.unattended > 0) {
+        activeCallsEl.closest('.kpi-card').classList.add('has-alerts');
+      } else {
+        activeCallsEl.closest('.kpi-card').classList.remove('has-alerts');
+      }
+    }
+    
+    // Update other stats if needed
+    const statsEl = document.getElementById('callStats');
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="stat-item">
+          <span class="stat-value">${stats.attended}</span>
+          <span class="stat-label">Attended</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${stats.unattended}</span>
+          <span class="stat-label">Unattended</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${new Date(stats.lastUpdated).toLocaleTimeString()}</span>
+          <span class="stat-label">Last Updated</span>
+        </div>
+      `;
+    }
+  }
+
+  // Format time as human-readable string
+  function formatTimeAgo(timestamp) {
+    const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d ${hours % 24}h ago`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m ago`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s ago`;
+    return 'just now';
+  }
+  
+  // Initialize event listeners for filters
+  function initCallFilters() {
+    const daysFilter = document.getElementById('daysRange');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    if (daysFilter) {
+      daysFilter.addEventListener('change', refreshActiveCalls);
+    }
+    
+    if (statusFilter) {
+      statusFilter.addEventListener('change', refreshActiveCalls);
+    }
+  }
+  
+  // Calls History functionality
+  let currentDaysFilter = 7;
+  let callsHistoryData = [];
+  
+  function initCallsHistory() {
+    console.log('Initializing calls history...');
+
+    // Initialize date range buttons
+    const dateRangeBtns = document.querySelectorAll('.date-range-btn');
+    console.log('Found date range buttons:', dateRangeBtns.length);
+
+    dateRangeBtns.forEach((btn, index) => {
+      console.log(`Button ${index}:`, btn.textContent, btn.getAttribute('data-days'));
+      btn.addEventListener('click', function() {
+        console.log('Date range button clicked:', this.getAttribute('data-days'));
+        // Remove active class from all buttons
+        dateRangeBtns.forEach(b => b.classList.remove('active'));
+        // Add active class to clicked button
+        this.classList.add('active');
+        // Update current filter
+        currentDaysFilter = parseInt(this.getAttribute('data-days'));
+        // Refresh calls history
+        refreshCallsHistory();
+      });
+    });
+
+    // Initial load
+    refreshCallsHistory();
+  }
+  
+  function startCallsHistoryRefresh() {
+    // Refresh every 5 minutes (300000 ms)
+    setInterval(refreshCallsHistory, 300000);
+  }
+
+  async function refreshCallsHistory() {
+    console.log('Refreshing calls history...');
+    const callsHistoryList = document.getElementById('callsHistoryList');
+
+    console.log('Found callsHistoryList element:', callsHistoryList);
+
+    // Show loading state
+    if (callsHistoryList) {
+      callsHistoryList.innerHTML = `
+        <div class="loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading call history...</p>
+        </div>`;
+      console.log('Set loading state');
+    }
+
+    try {
+      // Add a small delay to show loading state (for demo purposes)
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Fetch calls history data
+      const response = await fetch(`/api/active?days=${currentDaysFilter}&limit=50`);
+      console.log('API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('API response data:', data);
+
+      if (data.success) {
+        callsHistoryData = data.calls;
+        console.log('Setting calls history data, count:', callsHistoryData.length);
+        updateCallsHistoryUI(data);
+      } else {
+        throw new Error(data.error || 'Failed to load call history');
+      }
+    } catch (error) {
+      console.error('Error refreshing calls history:', error);
+
+      if (callsHistoryList) {
+        callsHistoryList.innerHTML = `
+          <div class="error">
+            <div class="icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3>Unable to Load Call History</h3>
+            <p>${error.message || 'Please check your connection and try again.'}</p>
+            <button class="retry-btn" onclick="refreshCallsHistory()">
+              <i class="fas fa-sync-alt"></i> Retry
+            </button>
+          </div>`;
+
+        // Add retry button styles dynamically
+        const style = document.createElement('style');
+        style.textContent = `
+          .error {
+            text-align: center;
+            padding: 32px 16px;
+            color: #e53e3e;
+          }
+          .error .icon {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            color: #e53e3e;
+          }
+          .error h3 {
+            margin: 0 0 8px;
+            font-size: 1.2rem;
+          }
+          .error p {
+            margin: 0 0 16px;
+            color: #718096;
+          }
+          .retry-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            color: #4a5568;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+          .retry-btn:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e0;
+          }
+          .retry-btn i {
+            font-size: 0.9em;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+  }
+
+  function updateCallsHistoryUI(data) {
+    const { stats, calls } = data;
+    const callsHistoryList = document.getElementById('callsHistoryList');
+    const lastUpdatedEl = document.getElementById('lastUpdated');
+
+    if (!callsHistoryList) return;
+
+    try {
+      // Update stats
+      updateCallsStats(stats);
+
+      // Update last updated timestamp
+      if (lastUpdatedEl) {
+        const now = new Date();
+        lastUpdatedEl.textContent = now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+        lastUpdatedEl.setAttribute('title', now.toLocaleString());
+      }
+
+      // Group calls by date
+      const callsByDate = groupCallsByDate(calls);
+
+      // Generate HTML for calls grouped by date
+      let html = '';
+
+      if (calls.length === 0) {
+        html = `
+          <div class="no-calls">
+            <div class="icon">📭</div>
+            No calls found in the selected date range
+          </div>`;
+      } else {
+        // Sort dates in descending order (newest first)
+        const sortedDates = Object.keys(callsByDate).sort((a, b) => new Date(b) - new Date(a));
+
+        // Generate HTML for each date group
+        sortedDates.forEach(date => {
+          const dateCalls = callsByDate[date];
+
+          html += `
+            <div class="calls-date-group">
+              <div class="date-header">${formatDateHeader(date)}</div>
+              <div class="calls-list">
+                ${dateCalls.map(call => renderCallItem(call)).join('')}
+              </div>
+            </div>`;
+        });
+      }
+
+      callsHistoryList.innerHTML = html;
+
+    } catch (error) {
+      console.error('Error updating calls history UI:', error);
+      callsHistoryList.innerHTML = `
+        <div class="error">
+          <div class="icon">❌</div>
+          Failed to update call history. Please try again.
+        </div>`;
+    }
+  function groupCallsByDate(calls) {
+    return calls.reduce((acc, call) => {
+      const dateStr = new Date(call.timestamp).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+
+      if (!acc[dateStr]) {
+        acc[dateStr] = [];
+      }
+
+      acc[dateStr].push(call);
+      return acc;
+    }, {});
+  }
+
+  function formatDateHeader(dateStr) {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const date = new Date(dateStr);
+    const options = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    };
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', options);
+    }
+  }
+
+  function renderCallItem(call) {
+    const callTime = new Date(call.timestamp);
+    const isUnattended = call.status === 'unattended';
+    const callType = call.type || 'Emergency';
+    const location = call.location || 'Location not specified';
+    const summary = call.summary || 'No details available';
+    const duration = call.duration ? `${call.duration} min` : 'N/A';
+
+    // Format time as HH:MM AM/PM
+    const formattedTime = callTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    // Get priority indicator if available
+    const priorityIndicator = call.priority === 'high' ? '🔴 ' :
+                             call.priority === 'medium' ? '🟠 ' : '🔵 ';
+
+    return `
+      <div class="call-item status-${call.status}" data-call-id="${call.id}">
+        <div class="call-icon" role="img" aria-label="${callType} call">
+          ${getCallIcon(callType)}
+        </div>
+        <div class="call-content">
+          <div class="call-header">
+            <div class="call-type" title="${callType}">
+              ${priorityIndicator}${callType}
+            </div>
+            <div class="call-time" title="${callTime.toLocaleString()}">
+              ${formattedTime}
+            </div>
+          </div>
+          <div class="call-location" title="${location}">
+            <i class="fas fa-map-marker-alt"></i>
+            ${location}
+          </div>
+          <div class="call-summary" title="${summary}">
+            ${summary}
+          </div>
+          <div class="call-status">
+            <span class="status-badge ${call.status}">
+              <i class="fas ${call.status === 'attended' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+              ${call.status === 'attended' ? 'Attended' : 'Unattended'}
+            </span>
+            <span class="call-duration">
+              <i class="far fa-clock"></i>
+              ${duration}
+            </span>
+            ${isUnattended ? '<span class="attention-flag"><i class="fas fa-exclamation-triangle"></i> Needs Attention</span>' : ''}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function getCallIcon(callType) {
+    const type = (callType || '').toLowerCase();
+
+    if (type.includes('accident') || type.includes('crash')) {
+      return '🚗';
+    } else if (type.includes('medical') || type.includes('health') || type.includes('ambulance')) {
+      return '🚑';
+    } else if (type.includes('fire')) {
+      return '🚒';
+    } else if (type.includes('women') || type.includes('harassment') || type.includes('assault')) {
+      return '🚺';
+    } else if (type.includes('theft') || type.includes('robbery') || type.includes('burglary')) {
+      return '👮';
+    } else if (type.includes('disturbance') || type.includes('noise') || type.includes('fight')) {
+      return '🔊';
+    } else if (type.includes('missing')) {
+      return '🔍';
+    } else {
+      return '📞';
+    }
+  }
+
+  // Initialize the dashboard
+  document.addEventListener('DOMContentLoaded', () => {
+    initCallFilters();
+    initCallsHistory();
+    startActiveCallsRefresh();
+    startCallsHistoryRefresh();
+  });
+
+  // Fetch zone data from CSV-based API
+  async function fetchZoneData(zoneType) {
+    try {
+      const res = await fetch(`/api/zones/${zoneType}`);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.error || 'Failed to load zone data');
+
+      return data;
+    } catch (error) {
+      console.error(`Error fetching ${zoneType} zones:`, error);
+      return null;
+    }
+  }
+
+  // state.incidents will be filled by fetchIncidents()
+
+  // formatTime is replaced by minutesAgoFromISO
+
+  const state = {
+    incidents: [],
+    layer: 'incidents'
+  };
+
+  // KPI rendering from /api/stats data (CSV-backed)
+  function renderKPIsFromStats(stats, activeCalls = 0) {
+    if (!stats) return;
+
+    // Update active calls count if provided
+    if (activeCalls > 0) {
+      const activeCallsEl = document.getElementById('activeCallsCount');
+      if (activeCallsEl) {
+        activeCallsEl.textContent = activeCalls;
+        activeCallsEl.closest('.kpi-card').style.display = 'flex';
+      }
+    }
+
+    // Animate numbers
+    animateNumber(totalEl(), stats.totalCalls || 0);
+    animateNumber(womenEl(), stats.totalWomenCalls || 0);
+    animateNumber(avgRespEl(), stats.avgResponseMinutes || 0, 'm');
+
+    // Dynamic trend indicator (placeholder)
+    if (trendEl()) {
+      const isUp = Math.random() > 0.4;
+      const percent = rand(2, 15);
+      trendEl().textContent = (isUp ? '▲ ' : '▼ ') + percent + '%';
+      trendEl().className = `trend ${isUp ? 'up' : 'down'}`;
+    }
+
+    // High-risk zones: top 3 overall areas from stats
+    if (hotspotList()) {
+      hotspotList().innerHTML = '';
+      (stats.topAreasOverall || []).slice(0, 3).forEach((item, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `${item.area} — <strong>${item.count} cases</strong>`;
+        li.style.animationDelay = `${index * 0.1}s`;
+        li.className = 'hotspot-item';
+        hotspotList().appendChild(li);
+      });
+    }
+  }
+
+  function animateNumber(element, targetValue, suffix = '') {
+    if (!element) return;
+
+    const currentValue = parseInt(element.textContent) || 0;
+    const difference = targetValue - currentValue;
+    const duration = 800;
+    const steps = 20;
+    const stepValue = difference / steps;
+    const stepDuration = duration / steps;
+
+    let currentStep = 0;
+    const timer = setInterval(() => {
+      currentStep++;
+      const newValue = Math.round(currentValue + (stepValue * currentStep));
+      element.textContent = newValue + suffix;
+
+      if (currentStep >= steps) {
+        clearInterval(timer);
+        element.textContent = targetValue + suffix;
+      }
+    }, stepDuration);
+  }
+
+  // Initialize Leaflet Map
+  function initializeMap() {
+    if (!mapEl()) return;
+    
+    // Create map centered on Goa
+    goaMap = L.map('map').setView([15.4909, 73.8278], 10);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(goaMap);
+    
+    // Add city markers
+    AREAS.forEach(area => {
+      const marker = L.marker([area.lat, area.lng])
+        .addTo(goaMap)
+        .bindPopup(`<b>${area.name}</b><br>Major City`);
+    });
+  }
+
+  // Clear incident markers
+  function clearIncidentMarkers() {
+    incidentMarkers.forEach(marker => goaMap.removeLayer(marker));
+    incidentMarkers = [];
+  }
+
+  // Clear zone circles
+  function clearZoneCircles() {
+    zoneCircles.forEach(circle => goaMap.removeLayer(circle));
+    zoneCircles = [];
+  }
+
+  // Render zones on map
+  function renderZones(zoneData) {
+    console.log('renderZones called with:', zoneData);
+    
+    if (!goaMap) {
+      console.error('No map instance available');
+      return;
+    }
+    
+    if (!zoneData || !zoneData.zones) {
+      console.error('No zone data provided');
+      return;
+    }
+    
+    clearZoneCircles();
+    console.log('Rendering', zoneData.zones.length, 'zones');
+    
+    let renderedCount = 0;
+    
+    zoneData.zones.forEach((zone, index) => {
+      console.log(`Processing zone ${index}:`, zone.location, zone.coordinates);
+      
+      if (!zone.coordinates) {
+        console.warn(`Zone ${zone.location} has no coordinates, skipping`);
+        return;
+      }
+      
+      try {
+        const circle = L.circle([zone.coordinates.lat, zone.coordinates.lng], {
+          color: zone.config.color,
+          fillColor: zone.config.fillColor,
+          fillOpacity: 0.3,
+          radius: zone.radius,
+          weight: 3
+        }).addTo(goaMap);
+
+        console.log(`Added circle for ${zone.location} at [${zone.coordinates.lat}, ${zone.coordinates.lng}] with radius ${zone.radius}m`);
+
+        // Create popup with zone information
+        const recentIncidentsHtml = zone.recentIncidents.map(incident => 
+          `<li><strong>${incident.type}</strong>: ${incident.description.substring(0, 50)}...</li>`
+        ).join('');
+
+        circle.bindPopup(`
+          <div class="zone-popup">
+            <h4>${zone.config.icon} ${zone.config.name}</h4>
+            <p><strong>Location:</strong> ${zone.location}</p>
+            <p><strong>Incidents:</strong> ${zone.incidentCount}</p>
+            <p><strong>Zone Type:</strong> ${zone.zoneType}</p>
+            <p><strong>Radius:</strong> ${Math.round(zone.radius)}m</p>
+            ${zone.recentIncidents.length > 0 ? `
+              <details>
+                <summary>Recent Incidents (${zone.recentIncidents.length})</summary>
+                <ul style="margin: 5px 0; padding-left: 20px; font-size: 12px;">
+                  ${recentIncidentsHtml}
+                </ul>
+              </details>
+            ` : ''}
+          </div>
+        `);
+
+        zoneCircles.push(circle);
+        renderedCount++;
+      } catch (error) {
+        console.error(`Error rendering zone ${zone.location}:`, error);
+      }
+    });
+
+    console.log(`Successfully rendered ${renderedCount} out of ${zoneData.zones.length} zones`);
+
+    // Update legend based on zone type
+    updateLegend(zoneData.config);
+  }
+
+  // Render incidents on map
+  function renderIncidents() {
+    if (!goaMap) return;
+    
+    clearIncidentMarkers();
+    
+    state.incidents.forEach((incident, index) => {
+      // Create custom icon based on incident type
+      const iconHtml = `
+        <div class="leaflet-incident-marker ${incident.type} ${incident.status} ${incident.priority}" 
+             style="background-color: ${incident.color}; 
+                    width: ${incident.priority === 'high' ? '18px' : '14px'}; 
+                    height: ${incident.priority === 'high' ? '18px' : '14px'};">
+        </div>
+      `;
+      
+      const customIcon = L.divIcon({
+        html: iconHtml,
+        className: 'custom-incident-icon',
+        iconSize: [incident.priority === 'high' ? 18 : 14, incident.priority === 'high' ? 18 : 14],
+        iconAnchor: [incident.priority === 'high' ? 9 : 7, incident.priority === 'high' ? 9 : 7]
+      });
+      
+      const marker = L.marker([incident.lat, incident.lng], { icon: customIcon })
+        .addTo(goaMap)
+        .bindPopup(`
+          <div class="incident-popup">
+            <h4>${incident.id}</h4>
+            <p><strong>Type:</strong> ${incident.typeLabel}</p>
+            <p><strong>Location:</strong> ${incident.area}</p>
+            <p><strong>Time:</strong> ${incident.time}</p>
+            <p><strong>Status:</strong> <span class="status ${incident.status}">${incident.status}</span></p>
+            <p><strong>Priority:</strong> ${incident.priority}</p>
+          </div>
+        `);
+      
+      incidentMarkers.push(marker);
+    });
+  }
+  
+  // Update legend based on current layer
+  function updateLegend(config = null) {
+    const legendEl = document.querySelector('.legend');
+    if (!legendEl) return;
+    
+    if (config) {
+      // Zone-specific legend
+      legendEl.innerHTML = `
+        <span><i class="dot" style="background-color: ${config.fillColor}"></i> ${config.name}</span>
+        <span style="font-size: 12px; color: #6b7280;">Zones based on CSV incident data</span>
+      `;
+    } else {
+      // Default incident legend
+      legendEl.innerHTML = `
+        <span><i class="dot blue"></i> Accident</span>
+        <span><i class="dot red"></i> Women's Safety</span>
+        <span><i class="dot yellow"></i> Crime</span>
+      `;
+    }
+  }
+
+  function renderHeat(layerKey) {
+    // For now, just filter and show relevant incidents
+    renderIncidents();
+  }
+
+  // Live feed
+  function renderFeed() {
+    if (!feedList()) return;
+    feedList().innerHTML = '';
+    const items = [...state.incidents]
+      .sort((a, b) => a.status.localeCompare(b.status))
+      .slice(0, 10);
+    items.forEach(i => {
+      const li = document.createElement('li');
+      const left = document.createElement('div');
+      left.innerHTML = `<strong>${i.id}</strong> • ${i.typeLabel} • ${i.area}<div class="item-meta">${i.time}</div>`;
+      const right = document.createElement('div');
+      const tag = document.createElement('span');
+      tag.className = `status ${i.status}`;
+      tag.textContent = i.status === 'pending' ? 'Escalation Pending' : 'Attended';
+      right.appendChild(tag);
+      li.appendChild(left);
+      li.appendChild(right);
+      feedList().appendChild(li);
+    });
+  }
+
+  // Toggle handlers
+  function bindToggles() {
+    toggles().forEach(btn => {
+      btn.addEventListener('click', async () => {
+        console.log('Tab clicked:', btn.dataset.layer);
+        toggles().forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        state.layer = btn.dataset.layer;
+        await updateMap();
+      });
+    });
+  }
+
+  async function updateMap() {
+    console.log('Updating map for layer:', state.layer);
+    
+    // Clear existing zones when switching layers
+    clearZoneCircles();
+    clearIncidentMarkers();
+    
+    if (state.layer === 'incidents') {
+      console.log('Rendering incidents');
+      renderIncidents();
+      updateLegend(); // Reset to default legend
+      
+      // Reset map title
+      const mapTitle = document.getElementById('mapTitle');
+      if (mapTitle) {
+        mapTitle.textContent = 'Goa Incidents Map';
+      }
+    } else {
+      console.log('Fetching zone data for:', state.layer);
+      
+      // Show loading in title
+      const mapTitle = document.getElementById('mapTitle');
+      if (mapTitle) {
+        mapTitle.textContent = `Loading ${state.layer} zones...`;
+      }
+      
+      // Fetch and render zone data for the selected layer
+      const zoneData = await fetchZoneData(state.layer);
+      console.log('Zone data received:', zoneData);
+      
+      if (zoneData && zoneData.zones && zoneData.zones.length > 0) {
+        currentZoneData = zoneData;
+        console.log('Rendering', zoneData.zones.length, 'zones');
+        renderZones(zoneData);
+        
+        // Update map title with zone info
+        if (mapTitle) {
+          mapTitle.textContent = `Goa ${zoneData.config.name} (${zoneData.totalIncidents} incidents)`;
+        }
+      } else {
+        console.log('No zone data or empty zones, falling back to incidents');
+        // Fallback to incidents if zone data fails
+        renderIncidents();
+        updateLegend();
+        
+        if (mapTitle) {
+          mapTitle.textContent = `Goa Incidents Map - No ${state.layer} zones found`;
+        }
+      }
+    }
+  }
+
+  function init() {
+    console.log('Initializing dashboard...');
+    
+    // Initialize map first
+    initializeMap();
+    
+    // Wait a bit for map to be ready, then bind toggles
+    setTimeout(() => {
+      bindToggles();
+      console.log('Toggles bound, map ready');
+    }, 500);
+    
+    const load = async () => {
+      try {
+        console.log('Loading dashboard data...');
+        
+        // Show loading state
+        const totalEl = document.getElementById('totalCalls');
+        if (totalEl) totalEl.textContent = 'Loading...';
+        
+        // Fetch all data in parallel
+        const [stats, incidents, activeCalls] = await Promise.all([
+          fetchStats(),
+          fetchIncidents(),
+          fetchActiveCalls()
+        ]);
+        
+        state.incidents = incidents || [];
+        console.log('Loaded', state.incidents.length, 'incidents;', activeCalls.totalActive, 'active calls; stats:', stats);
+
+        // Update UI with active calls
+        if (activeCalls && activeCalls.activeCalls) {
+          updateActiveCallsList(activeCalls.activeCalls);
+        }
+
+        // Render KPI numbers and hotspots from stats
+        renderKPIsFromStats(stats, activeCalls?.totalActive || 0);
+        await updateMap();
+        renderFeed();
+        
+        console.log('Dashboard loaded successfully');
+      } catch (e) {
+        console.error('Failed to load incidents', e);
+        // Show error state
+        const totalEl = document.getElementById('totalCalls');
+        if (totalEl) totalEl.textContent = 'Error';
+      }
+    };
+    
+    // Wait for map to be ready before loading data
+    setTimeout(load, 1000);
+
+    // Resize handling to keep pins in place
+    let resizeTO;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTO);
+      resizeTO = setTimeout(async () => await updateMap(), 120);
+    });
+
+    // Periodic refresh from API (reduced frequency for performance)
+    setInterval(load, 5 * 60 * 1000);
+    
+    // Set up more frequent refresh for active calls (every 30 seconds)
+    const ACTIVE_CALLS_REFRESH_INTERVAL = 30 * 1000; // 30 seconds
+    let activeCallsRefreshTimer;
+    
+    function startActiveCallsRefresh() {
+      // Clear any existing timer
+      if (activeCallsRefreshTimer) {
+        clearInterval(activeCallsRefreshTimer);
+      }
+      
+      // Initial refresh
+      refreshActiveCalls();
+      
+      // Set up interval for periodic refresh
+      activeCallsRefreshTimer = setInterval(refreshActiveCalls, ACTIVE_CALLS_REFRESH_INTERVAL);
+    }
+    
+    async function refreshActiveCalls() {
+      try {
+        console.log('Refreshing active calls...');
+        const activeCalls = await fetchActiveCalls();
+        
+        // Update the active calls list
+        if (activeCalls && activeCalls.activeCalls) {
+          updateActiveCallsList(activeCalls.activeCalls);
+          
+          // Update the active calls count in the KPI card
+          const activeCallsCount = activeCalls.activeCalls.length;
+          const activeCallsEl = document.getElementById('activeCallsCount');
+          const activeCallsCard = document.getElementById('kpi-active-calls');
+          
+          if (activeCallsEl) {
+            activeCallsEl.textContent = activeCallsCount;
+            
+            // Toggle warning class based on active calls count
+            if (activeCallsCount > 0) {
+              activeCallsCard.classList.add('warning');
+            } else {
+              activeCallsCard.classList.remove('warning');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing active calls:', error);
+      }
+    }
+    
+    // Start the active calls refresh when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      startActiveCallsRefresh();
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+// Logout function (global scope for onclick)

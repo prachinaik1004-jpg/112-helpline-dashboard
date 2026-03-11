@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Login - 112 Analytics & Safety Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/log.css" />
+</head>
+<body>
+  <noscript>
+    <div class="no-js">JavaScript is required to use this portal securely.</div>
+  </noscript>
+
+  <div class="background"></div>
+
+  <header class="site-header" role="banner">
+    <div class="brand brand-centered">
+      <img class="logo-img" src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <div class="titles titles-centered">
+        <span class="dept">Goa Police</span>
+        <h1 class="app">112 Helpline</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" role="main">
+    <section class="card" aria-labelledby="loginTitle">
+      <h2 id="loginTitle" class="visually-hidden">Secure Login</h2>
+      <form id="loginForm" class="login-form" novalidate>
+        <div class="field">
+          <label for="userId">User ID / Badge Number</label>
+          <input id="userId" name="userId" type="text" inputmode="text" autocomplete="username" placeholder="Enter badge number" required />
+          <p class="error" id="userIdError" role="alert" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="password-input">
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter password" required />
+            <button type="button" class="toggle" id="togglePassword" aria-pressed="false" aria-label="Show password">Show</button>
+          </div>
+          <p class="error" id="passwordError" role="alert" aria-live="polite"></p>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="loginBtn">
+          <span class="btn-label">Secure Login</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <footer class="card-footer">
+        <a href="#" class="link" id="forgotPassword">Forgot Password?</a>
+        <span class="support">Tech Support: 1800-XXX-112</span>
+      </footer>
+    </section>
+  </main>
+
+  <script src="/log.js" defer></script>
+</body>
+</html>

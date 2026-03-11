@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add New Entry - 112 Goa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="templates/entry.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Color palette to match dash.html */
+    :root {
+      --bg: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --card-border: #e5e7eb;
+      --brand: #0f5132;      /* header/title color */
+      --brand-2: #14532d;    /* darker hover */
+      --accent: #10b981;     /* accent (success) */
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .card {
+      background: var(--bg-card);
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+    
+    .card-body {
+      padding: 24px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30, 166, 114, 0.2);
+    }
+    
+    textarea.form-control {
+      min-height: 120px;
+      resize: vertical;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    
+    .btn:hover {
+      background: var(--primary-strong);
+    }
+    
+    .btn:active {
+      transform: translateY(1px);
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .required::after {
+      content: ' *';
+      color: var(--danger);
+    }
+    
+    .form-note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+      
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+      
+      .form-actions {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Cards/panels match dash.html look */
+    .card, .panel, .section, .box, .form-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+
+    /* Headings use brand color, not filled backgrounds */
+    h1, h2, h3, .panel header {
+      color: var(--brand);
+    }
+
+    /* Top header bar styling to match dash.html */
+    .card-header {
+      background: var(--brand);
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+    }
+    .card-header .title {
+      color: #ffffff !important; /* Make "Add New Entry" white */
+    }
+    .card-header .btn-link {
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.5) !important;
+      background: transparent;
+    }
+    .card-header .btn-link:hover {
+      background: rgba(255,255,255,0.08);
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.7) !important;
+    }
+
+    /* Inputs/selects/textarea in neutral style */
+    input[type="text"], input[type="number"], input[type="datetime-local"], input[type="time"], input[type="date"],
+    select, textarea {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+    }
+
+    /* Labels and help text */
+    label { color: var(--brand); }
+    .hint, .help, .subtitle, small { color: var(--muted); }
+
+    /* Buttons: neutral base with subtle accent on hover */
+    .btn, button, .button {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+    }
+    .btn:hover, button:hover, .button:hover {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+      color: var(--brand);
+    }
+    .btn.primary, button.primary, .button.primary {
+      background: #ffffff;
+      color: var(--brand);
+      border: 1px solid var(--card-border);
+    }
+    .btn.primary:hover, button.primary:hover, .button.primary:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
+      color: var(--brand-2);
+    }
+
+    /* Switches/checkbox accents */
+    input[type="checkbox"], input[type="radio"] {
+      accent-color: var(--brand-2);
+    }
+
+    /* Links */
+    a { color: var(--brand-2); }
+    a:hover { color: var(--brand); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <a href="set.html" class="btn-link" style="padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; display: inline-flex; align-items: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back
+          </a>
+          <h1 class="title" style="margin: 0; flex-grow: 1;">Add New Entry</h1>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="add-form">
+          <div class="form-group">
+            <label for="title" class="required">Title</label>
+            <input type="text" id="title" class="form-control" placeholder="Enter a descriptive title" required />
+            <div class="form-note">A clear title helps identify the entry later</div>
+          </div>
+          
+          <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" class="form-control">
+              <option value="">Select a category</option>
+              <option value="Incident">Incident</option>
+              <option value="Accident">Accident</option>
+              <option value="Emergency">Emergency</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="priority">Priority</label>
+            <select id="priority" class="form-control">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="location">Location</label>
+            <input type="text" id="location" class="form-control" placeholder="E.g., Panjim, Goa" value="Goa" />
+          </div>
+          
+          <div class="form-group">
+            <label for="date">Date</label>
+            <input type="date" id="date" class="form-control" />
+          </div>
+          
+          <div class="form-group">
+            <label for="details">Details</label>
+            <textarea id="details" class="form-control" placeholder="Provide detailed information about the entry..."></textarea>
+            <div class="form-note">Include all relevant information that might be helpful later</div>
+          </div>
+          
+          <div class="form-actions">
+            <a href="store.html" class="btn btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              View All Entries
+            </a>
+            <button type="submit" class="btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              Save Entry
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="templates/entry.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('add-form');
+      const titleInput = document.getElementById('title');
+      const categoryInput = document.getElementById('category');
+      const priorityInput = document.getElementById('priority');
+      const locationInput = document.getElementById('location');
+      const detailsInput = document.getElementById('details');
+      const dateInput = document.getElementById('date');
+      
+      // Set default date to today
+      const today = new Date().toISOString().split('T')[0];
+      if (dateInput) {
+        dateInput.value = today;
+        dateInput.max = today; // Prevent future dates
+      }
+      
+      // Form submission
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        try {
+          // Get form values
+          const title = titleInput.value.trim();
+          const category = categoryInput.value.trim() || 'General';
+          const priority = priorityInput.value || 'medium';
+          const location = locationInput.value.trim() || 'Goa';
+          const details = detailsInput.value.trim();
+          const date = dateInput.value || today;
+          
+          // Validate required fields
+          if (!title) {
+            showToast('Please enter a title');
+            titleInput.focus();
+            return;
+          }
+          
+          // Show loading state
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const originalBtnText = submitBtn.innerHTML;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin" style="margin-right: 6px;">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+            </svg>
+            Saving...
+          `;
+          
+          // Small delay to show loading state
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Get existing entries
+          const entries = getEntries();
+          const now = new Date();
+          
+          // Create new entry
+          const newEntry = {
+            id: crypto.randomUUID ? crypto.randomUUID() : 'entry-' + now.getTime(),
+            title: title,
+            category: category,
+            priority: priority,
+            location: location,
+            details: details,
+            date: date,
+            status: 'active',
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString()
+          };
+          
+          // Add to beginning of entries array (newest first)
+          entries.unshift(newEntry);
+          
+          // Save entries
+          const saved = saveEntries(entries);
+          
+          if (saved) {
+            // Redirect to store page after saving
+            window.location.href = '/store.html';
+            return; // Stop further execution
+          } else {
+            throw new Error('Failed to save entry');
+          }
+          
+        } catch (error) {
+          console.error('Error saving entry:', error);
+          showToast('❌ Failed to save entry. Please try again.');
+        } finally {
+          // Reset button state
+          const submitBtn = form.querySelector('button[type="submit"]');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              Save Entry
+            `;
+          }
+        }
+      });
+      
+      // Add animation for form elements
+      const formGroups = document.querySelectorAll('.form-group');
+      formGroups.forEach((group, index) => {
+        group.style.opacity = '0';
+        group.style.transform = 'translateY(10px)';
+        group.style.transition = `opacity 0.3s ease ${index * 0.1}s, transform 0.3s ease ${index * 0.1}s`;
+        
+        // Trigger reflow
+        void group.offsetWidth;
+        
+        // Animate in
+        group.style.opacity = '1';
+        group.style.transform = 'translateY(0)';
+      });
+    });
+    
+    // Add spin animation for loading state
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin {
+        animation: spin 1s linear infinite;
+        display: inline-block;
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>

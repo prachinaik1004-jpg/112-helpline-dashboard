@@ -1,0 +1,165 @@
+/* Theme */
+:root {
+  --bg: #0f3a2f;
+  --text: #ffffff;
+  --muted: #9ca3af;
+  --card: #1a4a3d;
+  --card-border: #2a5e52;
+  --brand: #0f5132;
+  --brand-2: #14532d;
+  --accent: #10b981;
+  --red: #ef4444;
+}
+*{box-sizing:border-box} html,body{height:100%} body{margin:0;font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:var(--text);background:var(--bg)}
+.background{position:fixed;inset:0;background:radial-gradient(900px 500px at 100% -10%, rgba(20,83,45,0.15), transparent 60%),radial-gradient(700px 400px at -10% 110%, rgba(15,81,50,0.1), transparent 60%),linear-gradient(135deg, rgba(20,83,45,0.08) 0.5px, transparent 0.5px),linear-gradient(45deg, rgba(20,83,45,0.06) 0.5px, transparent 0.5px);pointer-events:none;background-size:28px 28px,28px 28px,56px 56px,56px 56px}
+
+/* Top bar */
+.filters{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:var(--brand);color:white;border-bottom:1px solid rgba(255,255,255,0.1);}
+.brand-mini{display:inline-flex;align-items:center;gap:10px}
+.brand-mini img{width:36px;height:28px;object-fit:cover;border-radius:4px;background:#fff}
+.brand-mini span{font-weight:800;color:#fff}
+.filters-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid transparent;border-radius:10px;cursor:pointer;text-decoration:none;font-weight:700;transition:all 0.2s ease;}
+.gradient{background:linear-gradient(135deg,#0f5132,#14532d,#10b981);color:white;border:1px solid rgba(16,185,129,0.35)!important;box-shadow:0 4px 14px rgba(16,185,129,0.2);}
+.gradient:hover{filter:brightness(1.1);box-shadow:0 6px 18px rgba(16,185,129,0.3);transform:translateY(-1px);}
+.gradient:active{transform:translateY(0);box-shadow:0 2px 10px rgba(16,185,129,0.2);}
+.btn.sm{padding:6px 10px;font-size:0.85rem;}
+
+/* Button variants */
+.btn.secondary {
+  background: #f3f4f6;
+  color: lab(80.55% -5.51 0.34);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 5px #e9e2e20d;
+}
+
+.btn.danger {
+  background: #ef4444;
+  color: white;
+  border-color: #dc2626;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2);
+}
+
+.btn.danger:hover {
+  background: #dc2626;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.3);
+}
+
+/* Button groups */
+.btn-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-group .btn {
+  flex: 1;
+  justify-content: center;
+}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px}
+.card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.panel {
+  padding: 24px;
+  background: white;
+  border: 2px solid var(--card-border);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+.panel header{font-weight:800;color:var(--brand-2);padding:12px 16px;border-bottom:1px solid var(--card-border)}
+.panel-body{padding:12px 16px}
+
+/* Roles */
+.roles{display:grid;grid-template-columns:1fr;gap:10px}
+.role{display:flex;align-items:center;gap:10px}
+.role input{accent-color:#14532d}
+.role-card{flex:1;border:1px solid var(--card-border);border-radius:12px;padding:10px}
+.role-card h3{margin:0 0 6px}
+
+/* Toggles */
+.toggles{display:grid;gap:10px}
+.toggle{display:flex;align-items:center;gap:10px}
+.toggle input{accent-color:#14532d}
+
+/* Controls */
+.control-inline{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.control-inline.full{flex-direction:column;align-items:flex-start}
+.control-inline select,.control-inline input{border:1px solid #d1d5db;border-radius:8px;padding:8px 10px}
+
+/* Logs */
+.log-list{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;border-radius:8px;border:1px solid var(--card-border);}
+.log-list li{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid var(--card-border);transition:all 0.2s ease;}
+.log-list li:last-child{border-bottom:none;}
+.log-list li:hover{background-color:rgba(0,0,0,0.02);}
+.log-list .log-message{flex:1;}
+.log-list .log-time{color:var(--muted);font-size:0.8rem;white-space:nowrap;margin-left:12px;}
+.log-actions{display:flex;gap:10px;margin-top:12px;}
+
+/* Log entry types */
+.log-entry { position: relative; padding-left: 12px; }
+.log-entry::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 2px;
+  background-color: #3b82f6; /* Default blue for info */
+}
+
+.log-entry.info::before { background-color: #3b82f6; } /* Blue for info */
+.log-entry.warning::before { background-color: #f59e0b; } /* Yellow for warnings */
+.log-entry.error::before { background-color: #ef4444; } /* Red for errors */
+.log-entry.success::before { background-color: #10b981; } /* Green for success */
+.log-entry.system::before { background-color: #8b5cf6; } /* Purple for system */
+.log-entry.test::before { background-color: #6b7280; } /* Gray for test entries */
+
+.no-logs {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Animation for new log entries */
+@keyframes highlight {
+  from { background-color: rgba(59, 130, 246, 0.1); }
+  to { background-color: transparent; }
+}
+
+.log-entry.highlight {
+  animation: highlight 1.5s ease-out;
+}
+
+/* Scrollbar styling */
+.log-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-list::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.05);
+  border-radius: 3px;
+}
+
+.log-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.log-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive */
+@media (max-width:1100px){.layout{grid-template-columns:1fr}}

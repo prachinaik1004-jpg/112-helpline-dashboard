@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="112 Goa - Settings & Role-Based Access Control">
+  <title>Settings & Role-Based Access - 112 Goa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="./set-new.css">
+  <style>
+    /* Additional styles specific to settings page */
+    .settings-container {
+      display: flex;
+      min-height: calc(100vh - 64px);
+      background-color: var(--bg-secondary);
+    }
+
+    .settings-sidebar {
+      width: 280px;
+      background-color: var(--bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 64px);
+      position: sticky;
+      top: 64px;
+    }
+
+    .nav-menu {
+      list-style: none;
+      padding: var(--spacing-4) 0;
+    }
+
+    .nav-item {
+      padding: var(--spacing-3) var(--spacing-6);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-3);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: var(--transition);
+    }
+
+    .nav-item:hover {
+      background-color: var(--bg-secondary);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background-color: var(--primary);
+      color: white;
+      border-left: 4px solid var(--accent);
+    }
+
+    .settings-panels {
+      flex: 1;
+      padding: var(--spacing-6);
+      max-width: 100%;
+      overflow-y: auto;
+    }
+
+    .settings-panel {
+      display: none;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .panel-header {
+      margin-bottom: var(--spacing-6);
+    }
+
+    .panel-header h2 {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-3);
+    }
+
+    .panel-description {
+      color: var(--text-secondary);
+      margin-top: var(--spacing-2);
+    }
+
+    .settings-group {
+      background-color: var(--bg);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-6);
+      margin-bottom: var(--spacing-6);
+      box-shadow: var(--card-shadow);
+    }
+
+    .settings-group h3 {
+      font-size: 1.125rem;
+      margin-bottom: var(--spacing-4);
+      color: var(--text);
+      padding-bottom: var(--spacing-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: var(--spacing-4) 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting:last-child {
+      border-bottom: none;
+    }
+
+    .setting-info {
+      flex: 1;
+      margin-right: var(--spacing-6);
+    }
+
+    .setting-info label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: var(--spacing-1);
+    }
+
+    .setting-info p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin: 0;
+    }
+
+    .form-select, .form-input {
+      min-width: 280px;
+    }
+
+    .input-with-action {
+      display: flex;
+      gap: var(--spacing-2);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: var(--spacing-4);
+      border-top: 1px solid var(--border);
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-3);
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .username {
+      font-weight: 600;
+    }
+
+    .user-role {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: var(--spacing-4) 0;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .action-bar-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--spacing-6);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: var(--spacing-3);
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: var(--spacing-4) var(--spacing-6);
+      border-radius: var(--radius-md);
+      background-color: var(--success);
+      color: white;
+      box-shadow: var(--card-shadow);
+      transform: translateY(-100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .notification.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 768px) {
+      .settings-sidebar {
+        position: fixed;
+        top: 64px;
+        left: -280px;
+        height: calc(100vh - 64px);
+        transition: transform 0.3s ease;
+        z-index: 40;
+      }
+
+      .settings-sidebar.active {
+        transform: translateX(280px);
+      }
+
+      .settings-panels {
+        padding: var(--spacing-4);
+      }
+
+      .setting {
+        flex-direction: column;
+        gap: var(--spacing-3);
+      }
+
+      .form-select, .form-input {
+        min-width: 100%;
+      }
+
+      .action-bar-content {
+        padding: 0 var(--spacing-4);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="background"></div>
+  <div class="notification" id="notification"></div>
+
+  <!-- Top Bar -->
+  <header class="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/5/55/Goa_Police_Logo.svg/1200px-Goa_Police_Logo.svg.png" 
+             alt="Goa Police" 
+             class="brand-logo"
+             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNiIgaGVpZ2h0PSIzNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiI+PHBhdGggZmlsbD0iIzBmNTEzMiIgZD0iTTEyIDJDNi40NzcgMiAyIDYuNDc3IDIgMTJzNC40NzcgMTAgMTAgMTAgMTAtNC40NzcgMTAtMTBTMTcuNTIzIDIgMTIgMnptLTEgMTVoMnYyaC0ydi0yem0wLTEzaDJ2MTBoLTJWNHoiLz48L3N2Zz4=';">
+        <div class="brand-text">
+          <h1>Settings</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="themeToggle" class="btn btn-icon" aria-label="Toggle dark mode">
+          <i class="fas fa-moon"></i>
+        </button>
+        <button id="menuToggle" class="btn btn-icon" aria-label="Toggle menu">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="settings-container">
+    <!-- Sidebar Navigation -->
+    <aside class="settings-sidebar" id="sidebar" aria-label="Settings navigation">
+      <nav>
+        <ul class="nav-menu">
+          <li class="nav-item active" data-panel="general">
+            <i class="fas fa-cog"></i>
+            <span>General</span>
+          </li>
+          <li class="nav-item" data-panel="account">
+            <i class="fas fa-user"></i>
+            <span>Account</span>
+          </li>
+          <li class="nav-item" data-panel="notifications">
+            <i class="fas fa-bell"></i>
+            <span>Notifications</span>
+          </li>
+          <li class="nav-item" data-panel="security">
+            <i class="fas fa-shield-alt"></i>
+            <span>Security</span>
+          </li>
+          <li class="nav-item" data-panel="access">
+            <i class="fas fa-users-cog"></i>
+            <span>Access Control</span>
+          </li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="avatar">
+            <i class="fas fa-user-circle"></i>
+          </div>
+          <div class="user-info">
+            <span class="username" id="currentUser">Administrator</span>
+            <span class="user-role" id="currentRole">Super Admin</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Settings Panels -->
+    <div class="settings-panels">
+      <!-- General Settings Panel -->
+      <section id="general-panel" class="settings-panel active" aria-labelledby="general-heading">
+        <div class="panel-header">
+          <h2 id="general-heading">
+            <i class="fas fa-cog"></i> General Settings
+          </h2>
+          <p class="panel-description">Configure application preferences and display options</p>
+        </div>
+        
+        <div class="settings-group">
+          <h3>Display</h3>
+          <div class="setting">
+            <div class="setting-info">
+              <label for="themePreference">Theme</label>
+              <p>Choose between light and dark mode, or set to system default</p>
+            </div>
+            <select id="themePreference" class="form-select">
+              <option value="system">System Default</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+
+          <div class="setting">
+            <div class="setting-info">
+              <label for="language">Language</label>
+              <p>Select your preferred language</p>
+            </div>
+            <select id="language" class="form-select">
+              <option value="en">English</option>
+              <option value="hi">हिंदी</option>
+              <option value="mr">मराठी</option>
+              <option value="kn">ಕನ್ನಡ</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Map Settings</h3>
+          <div class="setting">
+            <div class="setting-info">
+              <label for="mapProvider">Map Provider</label>
+              <p>Choose your preferred map service</p>
+            </div>
+            <select id="mapProvider" class="form-select">
+              <option value="google">Google Maps</option>
+              <option value="mapbox">Mapbox</option>
+              <option value="openstreetmap">OpenStreetMap</option>
+            </select>
+          </div>
+
+          <div id="apiKeyContainer" class="setting" style="display: none;">
+            <div class="setting-info">
+              <label for="mapApiKey">API Key</label>
+              <p>Enter your map provider API key</p>
+            </div>
+            <div class="input-with-action">
+              <input type="password" id="mapApiKey" class="form-input" placeholder="Enter API key">
+              <button type="button" class="btn btn-icon" id="toggleApiKey" aria-label="Show API key">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Other panels will be loaded dynamically -->
+      <div id="dynamic-panel" class="settings-panel">
+        <!-- Content will be loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <footer class="action-bar">
+    <div class="action-bar-content">
+      <button id="backBtn" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </button>
+      <div class="action-buttons">
+        <button id="cancelBtn" class="btn btn-outline">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+        <button id="saveBtn" class="btn btn-primary">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+    
+    // Check for saved theme preference or use system preference
+    const savedTheme = localStorage.getItem('theme') || 'system';
+    
+    function applyTheme(theme) {
+      if (theme === 'system') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      } else {
+        html.setAttribute('data-theme', theme);
+      }
+      // Update the select element
+      document.getElementById('themePreference').value = theme;
+    }
+    
+    // Initialize theme
+    applyTheme(savedTheme);
+    
+    // Toggle theme on button click
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', newTheme);
+      applyTheme(newTheme);
+      
+      // Update icon
+      const icon = themeToggle.querySelector('i');
+      icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+      
+      showNotification(`Switched to ${newTheme} mode`);
+    });
+    
+    // Handle system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      if (savedTheme === 'system') {
+        applyTheme('system');
+      }
+    });
+    
+    // Toggle API key visibility
+    const toggleApiKey = document.getElementById('toggleApiKey');
+    if (toggleApiKey) {
+      toggleApiKey.addEventListener('click', () => {
+        const input = document.getElementById('mapApiKey');
+        const icon = toggleApiKey.querySelector('i');
+        
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.className = 'fas fa-eye-slash';
+          toggleApiKey.setAttribute('aria-label', 'Hide API key');
+        } else {
+          input.type = 'password';
+          icon.className = 'fas fa-eye';
+          toggleApiKey.setAttribute('aria-label', 'Show API key');
+        }
+      });
+    }
+    
+    // Show/hide API key field based on map provider
+    const mapProvider = document.getElementById('mapProvider');
+    if (mapProvider) {
+      mapProvider.addEventListener('change', (e) => {
+        const apiKeyContainer = document.getElementById('apiKeyContainer');
+        apiKeyContainer.style.display = e.target.value !== 'openstreetmap' ? 'flex' : 'none';
+      });
+    }
+    
+    // Navigation between settings panels
+    const navItems = document.querySelectorAll('.nav-item');
+    const panels = document.querySelectorAll('.settings-panel');
+    
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const panelId = item.getAttribute('data-panel');
+        
+        // Update active state
+        navItems.forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Show selected panel
+        panels.forEach(panel => panel.classList.remove('active'));
+        const targetPanel = document.getElementById(`${panelId}-panel`);
+        
+        if (targetPanel) {
+          targetPanel.classList.add('active');
+        } else {
+          // For dynamic panels that will be loaded
+          const dynamicPanel = document.getElementById('dynamic-panel');
+          dynamicPanel.classList.add('active');
+          // Here you would typically load the panel content via AJAX
+          dynamicPanel.innerHTML = `<h2>${panelId.charAt(0).toUpperCase() + panelId.slice(1)} Settings</h2>`;
+        }
+        
+        // Close mobile menu if open
+        if (window.innerWidth <= 768) {
+          document.getElementById('sidebar').classList.remove('active');
+        }
+      });
+    });
+    
+    // Mobile menu toggle
+    const menuToggle = document.getElementById('menuToggle');
+    if (menuToggle) {
+      menuToggle.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('active');
+      });
+    }
+    
+    // Back button
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        window.location.href = 'dash.html';
+      });
+    }
+    
+    // Save button
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        // Here you would typically save the settings to your backend
+        const settings = {
+          theme: document.getElementById('themePreference').value,
+          language: document.getElementById('language').value,
+          mapProvider: document.getElementById('mapProvider').value,
+          mapApiKey: document.getElementById('mapApiKey')?.value || ''
+        };
+        
+        // Save to localStorage for demo purposes
+        localStorage.setItem('appSettings', JSON.stringify(settings));
+        
+        showNotification('Settings saved successfully!');
+      });
+    }
+    
+    // Cancel button
+    const cancelBtn = document.getElementById('cancelBtn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        // Reset form or go back
+        window.history.back();
+      });
+    }
+    
+    // Load saved settings
+    function loadSettings() {
+      const savedSettings = localStorage.getItem('appSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        
+        if (settings.theme) {
+          document.getElementById('themePreference').value = settings.theme;
+          applyTheme(settings.theme);
+        }
+        
+        if (settings.language) {
+          document.getElementById('language').value = settings.language;
+        }
+        
+        if (settings.mapProvider) {
+          const mapProvider = document.getElementById('mapProvider');
+          mapProvider.value = settings.mapProvider;
+          // Trigger change event to show/hide API key field
+          mapProvider.dispatchEvent(new Event('change'));
+        }
+        
+        if (settings.mapApiKey && document.getElementById('mapApiKey')) {
+          document.getElementById('mapApiKey').value = settings.mapApiKey;
+        }
+      }
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.className = 'notification';
+      
+      // Set notification type (success, error, warning, info)
+      notification.classList.add(type);
+      
+      // Show notification
+      setTimeout(() => {
+        notification.classList.add('show');
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+          notification.classList.remove('show');
+        }, 3000);
+      }, 100);
+    }
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSettings();
+      
+      // Set initial theme icon
+      const icon = themeToggle.querySelector('i');
+      const currentTheme = html.getAttribute('data-theme');
+      icon.className = currentTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+      
+      // Close menu when clicking outside on mobile
+      document.addEventListener('click', (e) => {
+        const sidebar = document.getElementById('sidebar');
+        const menuBtn = document.getElementById('menuToggle');
+        
+        if (window.innerWidth <= 768 && 
+            !sidebar.contains(e.target) && 
+            e.target !== menuBtn && 
+            !menuBtn.contains(e.target)) {
+          sidebar.classList.remove('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

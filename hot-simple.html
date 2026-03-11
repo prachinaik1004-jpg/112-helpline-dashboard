@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hotspot Map - 112 Goa</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+    
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+    
+    .legend {
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      line-height: 1.5;
+    }
+    
+    .legend h4 {
+      margin: 0 0 8px;
+    }
+    
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    // Initialize the map centered on Goa
+    const map = L.map('map').setView([15.4909, 73.8278], 12);
+    
+    // Add OpenStreetMap tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Add legend
+    const legend = L.control({position: 'bottomright'});
+    legend.onAdd = function() {
+      const div = L.DomUtil.create('div', 'legend');
+      div.innerHTML = `
+        <h4>Risk Level</h4>
+        <div><i style="background: #ff0000"></i> High Risk Zone</div>
+      `;
+      return div;
+    };
+    legend.addTo(map);
+    
+    // Sample high risk zone (replace with your actual data)
+    const highRiskZone = L.circle([15.4909, 73.8278], {
+      color: 'red',
+      fillColor: '#f03',
+      fillOpacity: 0.3,
+      radius: 1000
+    }).addTo(map);
+    
+    // Add popup to the high risk zone
+    highRiskZone.bindPopup("<b>High Risk Zone</b><br>High incident area");
+    
+    // Add marker for the center of the high risk zone
+    L.marker([15.4909, 73.8278], {
+      icon: L.divIcon({
+        html: '⚠️',
+        className: 'risk-marker',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30]
+      })
+    }).addTo(map);
+  </script>
+</body>
+</html>

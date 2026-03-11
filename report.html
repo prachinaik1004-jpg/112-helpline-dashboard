@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports & Insights - 112 Goa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./report.css" />
+</head>
+<body>
+  <div class="background"></div>
+
+  <!-- Top Bar -->
+  <header class="filters" role="region" aria-label="Reports">
+    <div class="brand-mini">
+      <img src="https://c.ndtvimg.com/2019-10/uhi2a3eg_goapolice_625x300_09_October_19.jpg" alt="Goa Police" />
+      <span>Reports & Insights</span>
+    </div>
+    <a class="btn gradient sm back-btn" href="./dashboard.html" title="Back to Dashboard">← Back</a>
+    <div class="filters-row">
+      <label class="control">
+        <span>Range</span>
+        <select id="repRange">
+          <option value="24h">Last 24h</option>
+          <option value="7d" selected>7 days</option>
+          <option value="30d">30 days</option>
+        </select>
+      </label>
+      <button id="refreshReports" class="btn gradient">Refresh</button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="layout">
+    <!-- Downloads column -->
+    <section class="downloads card">
+      <header>Downloadable Reports</header>
+      <div class="dl-grid">
+        <div class="dl-card">
+          <h3>Daily Response Time</h3>
+          <div class="chart-wrap"><canvas id="respChart" width="420" height="200"></canvas></div>
+          <div class="actions">
+            <button id="respCSV" class="btn gradient sm">CSV</button>
+            <button id="respXLS" class="btn gradient sm">Excel</button>
+            <button id="respPDF" class="btn gradient sm">PDF</button>
+          </div>
+        </div>
+        <div class="dl-card">
+          <h3>Zone-wise Incident Heatmap</h3>
+          <div class="chart-wrap"><canvas id="zoneHeat" width="420" height="200"></canvas></div>
+          <div class="actions">
+            <button id="zoneCSV" class="btn gradient sm">CSV</button>
+            <button id="zoneXLS" class="btn gradient sm">Excel</button>
+            <button id="zonePDF" class="btn gradient sm">PDF</button>
+          </div>
+        </div>
+        <div class="dl-card">
+          <h3>Ride-Safety Escalations</h3>
+          <ul id="escList" class="esc-list"></ul>
+          <div class="actions">
+            <button id="escCSV" class="btn gradient sm">CSV</button>
+            <button id="escXLS" class="btn gradient sm">Excel</button>
+            <button id="escPDF" class="btn gradient sm">PDF</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Forecasts -->
+    <aside class="ai card">
+      <header>AI Forecast (Next 7 days)</header>
+      <div class="ai-panels">
+        <div class="panel">
+          <h3>Predictive Hotspots</h3>
+          <ul id="hotspotForecast" class="forecast-list"></ul>
+        </div>
+        <div class="panel">
+          <h3>Patrol Resource Allocation</h3>
+          <ul id="patrolForecast" class="forecast-list"></ul>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="./report.js" defer></script>
+</body>
+</html>
